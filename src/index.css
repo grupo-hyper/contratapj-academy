@@ -1,2 +1,9 @@
 @import 'tailwindcss';
 @config '../tailwind.config.ts';
+
+@layer base {
+  html,
+  body {
+    @apply bg-cpj-bg text-cpj-white;
+  }
+}
