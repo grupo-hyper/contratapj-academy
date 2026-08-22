@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// The module validates env at import time, so we stub dummy (non-real) values
-// and re-import it fresh in each test. No network call is ever made: creating a
-// Supabase client is a pure construction step.
+// The client is now side-effect-free on import: env validation + createClient
+// run lazily on first use (getSupabase() / first property access on `supabase`).
+// We stub dummy (non-real) values and re-import fresh per test. No network call
+// is ever made — creating a client and building a query are pure operations.
 
 describe('supabase client', () => {
   beforeEach(() => {
@@ -15,20 +16,30 @@ describe('supabase client', () => {
     vi.unstubAllEnvs()
   })
 
-  it('initializes a usable client without real env (mocked, no network)', async () => {
-    const { supabase } = await import('./supabase')
+  it('imports without side effects (no createClient/validation at import)', async () => {
+    // Even with a required var missing, merely importing must not throw.
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    await expect(import('./supabase')).resolves.toBeDefined()
+  })
 
-    expect(supabase).toBeDefined()
-    // Expected client surface used by later phases (auth + data access).
+  it('initializes a usable client on first use with dummy env (no network)', async () => {
+    const { supabase, getSupabase } = await import('./supabase')
+
+    // Lazy Proxy forwards to the real client on first property access.
     expect(supabase.auth).toBeDefined()
     expect(typeof supabase.from).toBe('function')
     // from() builds a query lazily; it must not throw / hit the network here.
     expect(supabase.from('any_table')).toBeDefined()
+
+    // getSupabase() returns the same singleton instance.
+    expect(getSupabase()).toBe(getSupabase())
   })
 
-  it('throws a readable error naming the missing var when env is absent', async () => {
+  it('throws a readable error naming the missing var on first use', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', '')
+    const { getSupabase } = await import('./supabase')
 
-    await expect(import('./supabase')).rejects.toThrow(/VITE_SUPABASE_URL/)
+    // Import succeeded (side-effect-free); the throw happens on first use.
+    expect(() => getSupabase()).toThrow(/VITE_SUPABASE_URL/)
   })
 })
