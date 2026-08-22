@@ -78,7 +78,7 @@ export function LoginPage() {
             className="rounded-xl border border-cpj-navy bg-cpj-navy/20 p-5 text-center"
           >
             <p className="text-sm">
-              Pronto — enviamos um link de acesso para{' '}
+              Pronto! Enviamos um link de acesso para{' '}
               <span className="font-semibold text-cpj-white">{email}</span>.
               Abra pelo mesmo dispositivo.
             </p>
