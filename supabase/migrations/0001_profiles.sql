@@ -72,6 +72,12 @@ $$;
 comment on function public.current_user_role() is
   'Retorna o papel do usuário autenticado. SECURITY DEFINER para ignorar RLS e evitar recursão nas políticas de profiles.';
 
+-- As políticas de SELECT chamam esta função na cláusula USING como o papel
+-- `authenticated`. Hoje funciona pelo grant PUBLIC padrão; o grant explícito
+-- torna isso robusto caso o projeto revogue EXECUTE de PUBLIC (defesa em
+-- profundidade).
+grant execute on function public.current_user_role() to authenticated;
+
 -- -----------------------------------------------------------------------------
 -- 3) Trigger: cria o perfil quando um usuário nasce no Auth
 -- -----------------------------------------------------------------------------
@@ -85,6 +91,12 @@ comment on function public.current_user_role() is
 --
 -- `on conflict (id) do nothing` torna o trigger idempotente: se o perfil já
 -- existir (re-execução, backfill manual, etc.), não quebra o fluxo de signup.
+--
+-- COMPORTAMENTO FAIL-CLOSED: este trigger roda AFTER INSERT dentro da MESMA
+-- transação do INSERT em auth.users. Se ele levantar exceção, o signup inteiro
+-- sofre rollback e o usuário NÃO é criado. Isso é intencional/aceitável: é
+-- preferível falhar o cadastro a deixar um usuário órfão (sem linha em
+-- profiles), estado que quebraria as políticas de RLS e o app.
 create or replace function public.handle_new_user()
   returns trigger
   language plpgsql
@@ -158,10 +170,18 @@ create policy profiles_update_own
 
 -- Trava anti-escalonamento: impede que o próprio dono altere seu `role` pelo
 -- caminho de auto-edição. Mudanças de papel devem passar por um fluxo com
--- privilégio elevado (SECURITY DEFINER / service_role), que não é bloqueado
--- aqui porque este trigger só reage a UPDATE e a lógica compara os valores.
--- O service_role/CMS pode contornar recriando o valor via função definer
--- dedicada (a ser criada quando o gerenciamento de papéis existir).
+-- privilégio elevado (service_role / admin via função definer), que continua
+-- podendo promover papéis — este trigger só barra o usuário autenticado comum.
+--
+-- Detecta o papel do CHAMADOR (não o do perfil) via auth.role(), o helper
+-- idiomático do Supabase que lê o claim `role` do JWT da requisição. Para uma
+-- requisição do cliente com a anon key + sessão de usuário, auth.role() é
+-- 'authenticated'; para o service_role/CMS é 'service_role' (e para chamadas
+-- internas sem JWT é NULL) — nesses casos a troca de role é permitida.
+--
+-- NÃO usar current_setting('request.jwt.claim.role', ...): esse GUC (singular,
+-- um claim por chave) não existe no PostgREST 9+/Supabase moderno; retornaria
+-- sempre NULL e o guard barraria TODA troca de role, inclusive as legítimas.
 create or replace function public.profiles_prevent_role_change()
   returns trigger
   language plpgsql
@@ -169,11 +189,11 @@ create or replace function public.profiles_prevent_role_change()
   set search_path = public
 as $$
 begin
-  -- Se o papel mudou e quem faz a mudança NÃO é service_role, rejeita.
+  -- Se o papel mudou e o chamador é um usuário autenticado comum, rejeita.
   if new.role is distinct from old.role
-     and coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role'
+     and coalesce(auth.role(), '') = 'authenticated'
   then
-    raise exception 'Alteração de role não é permitida por auto-edição (use o fluxo admin).'
+    raise exception 'Alteração de papel não permitida por este usuário (use o fluxo admin).'
       using errcode = '42501'; -- insufficient_privilege
   end if;
   return new;
