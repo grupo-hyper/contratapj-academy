@@ -16,7 +16,7 @@ export function TopNav({ userName, role, onSignOut, children }: TopNavProps) {
   const initial = userName.trim().charAt(0).toUpperCase() || '?'
 
   return (
-    <header className="sticky top-0 z-40 border-b border-cpj-white/10 bg-cpj-bg/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-cpj-royal/15 bg-cpj-bg/70 backdrop-blur-lg">
       <nav className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
         {/* Wordmark */}
         <span className="flex items-center gap-2 font-bold tracking-tight text-cpj-white">

@@ -75,11 +75,11 @@ export function Tile({
       aria-disabled={locked || undefined}
       tabIndex={0}
       className={[
-        'group relative flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-cpj-navy/40 text-left transition sm:w-48',
+        'group ocean-glass relative flex w-40 shrink-0 flex-col overflow-hidden rounded-xl text-left transition-transform duration-200 ease-out sm:w-48',
         stateRing[state],
         locked
           ? 'cursor-not-allowed opacity-50'
-          : 'cursor-pointer hover:-translate-y-1 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal',
+          : 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_34px_-8px_rgb(66_89_223_/_0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal',
       ].join(' ')}
     >
       {/* Capa */}
@@ -92,7 +92,11 @@ export function Tile({
             loading="lazy"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-cpj-navy to-cpj-bg" />
+          // Placeholder "oceânico": degradê marinho + glow radial azul central,
+          // ecoando as capas ilustradas da referência Blue Ocean.
+          <div className="relative h-full w-full bg-gradient-to-br from-cpj-navy via-cpj-navy/60 to-cpj-bg">
+            <div className="absolute inset-0 bg-[radial-gradient(70%_70%_at_50%_35%,rgb(66_89_223_/_0.35),transparent_70%)]" />
+          </div>
         )}
 
         {/* Selo de estado (canto superior) */}

@@ -52,7 +52,7 @@ export function LessonPage() {
   const showLoading = loading || isLoading
 
   return (
-    <main className="min-h-screen bg-cpj-bg text-cpj-white">
+    <main className="ocean-bg min-h-screen text-cpj-white">
       <TopNav userName={userName} role={role} onSignOut={signOut}>
         <Link
           to="/"

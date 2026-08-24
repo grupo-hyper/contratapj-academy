@@ -60,8 +60,8 @@ export function LoginPage() {
   if (user) return <Navigate to="/" replace />
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cpj-bg px-4 text-cpj-white">
-      <div className="w-full max-w-sm">
+    <main className="ocean-bg flex min-h-screen items-center justify-center px-4 text-cpj-white">
+      <div className="ocean-glass w-full max-w-sm rounded-2xl p-8 shadow-[0_20px_60px_-20px_rgb(66_89_223_/_0.45)]">
         <div className="mb-8 text-center">
           <img
             src="/favicon.svg"

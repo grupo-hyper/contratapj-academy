@@ -23,7 +23,7 @@ export function Hero({
   onAction,
 }: HeroProps) {
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-cpj-navy/50">
+    <section className="ocean-glass relative overflow-hidden rounded-2xl">
       {/* Fundo */}
       <div className="absolute inset-0">
         {backgroundUrl ? (
@@ -35,6 +35,8 @@ export function Hero({
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-cpj-navy via-cpj-bg to-cpj-bg" />
         )}
+        {/* Glow royal oceânico no canto — profundidade da referência Blue Ocean. */}
+        <div className="absolute inset-0 bg-[radial-gradient(90%_120%_at_85%_10%,rgb(66_89_223_/_0.4),transparent_60%)]" />
         {/* Gradiente escuro para legibilidade do texto */}
         <div className="absolute inset-0 bg-gradient-to-r from-cpj-bg via-cpj-bg/80 to-transparent" />
       </div>
