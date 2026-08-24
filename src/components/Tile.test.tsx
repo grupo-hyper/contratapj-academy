@@ -29,11 +29,15 @@ describe('Tile', () => {
     expect(screen.getByLabelText(/concluíd/i)).toBeInTheDocument()
   })
 
-  it('estado "locked": é não-acionável e NÃO dispara onClick', () => {
+  it('estado "locked": não-acionável mas focável (descobrível por teclado/AT)', () => {
     const onClick = vi.fn()
     render(<Tile title="Aula bloqueada" state="locked" onClick={onClick} />)
     const el = screen.getByRole('button', { name: /aula bloqueada/i })
     expect(el).toHaveAttribute('aria-disabled', 'true')
+    // Permanece no fluxo de foco: sem `disabled` nativo e com tabIndex=0.
+    expect(el).not.toBeDisabled()
+    expect(el).toHaveAttribute('tabindex', '0')
+    // Clicar não dispara a ação.
     el.click()
     expect(onClick).not.toHaveBeenCalled()
     // Afordância de cadeado.

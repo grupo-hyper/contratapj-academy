@@ -72,8 +72,8 @@ export function Tile({
     <button
       type="button"
       onClick={locked ? undefined : onClick}
-      disabled={locked}
       aria-disabled={locked || undefined}
+      tabIndex={0}
       className={[
         'group relative flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-cpj-navy/40 text-left transition sm:w-48',
         stateRing[state],

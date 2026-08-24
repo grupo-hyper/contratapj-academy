@@ -2,7 +2,7 @@
  * Row — faixa horizontal rolável (padrão "row" de streaming).
  * Presentational: recebe `title` e os tiles como `children`.
  */
-import type { ReactNode } from 'react'
+import { Children, type ReactNode } from 'react'
 
 interface RowProps {
   title: string
@@ -20,7 +20,13 @@ export function Row({ title, children, className }: RowProps) {
         className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
         role="list"
       >
-        {children}
+        {/* Envolve cada tile num listitem para manter semântica list/listitem
+            válida — os leitores de tela descartam um `list` sem `listitem`. */}
+        {Children.map(children, (child) => (
+          <div role="listitem" className="contents">
+            {child}
+          </div>
+        ))}
       </div>
     </section>
   )
