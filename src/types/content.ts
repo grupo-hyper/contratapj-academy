@@ -79,3 +79,45 @@ export interface LessonProgress {
   concluida: boolean
   updated_at: string
 }
+
+/**
+ * Tentativa de quiz. Tabela `quiz_attempts`
+ * (ver `supabase/migrations/0004_quiz.sql`).
+ * Criada SOMENTE pela RPC `submit_quiz` (SECURITY DEFINER): o cliente não tem
+ * policy de INSERT. Dono lê as suas; gestor/autor leem todas via RLS.
+ * `respostas` é o payload enviado (question_id -> option_id) guardado para
+ * auditoria — NÃO contém gabarito.
+ */
+export interface QuizAttempt {
+  id: string
+  profile_id: string
+  module_id: string
+  nota: number
+  aprovado: boolean
+  respostas: Record<string, string>
+  created_at: string
+}
+
+/**
+ * Payload enviado à RPC `submit_quiz`: mapa question_id -> option_id (uuid como
+ * texto). Questão ausente é contada como errada no servidor.
+ */
+export type QuizAnswers = Record<string, string>
+
+/**
+ * Resultado da RPC `submit_quiz`. SOMENTE agregados — o gabarito (`correta`) e o
+ * acerto por-questão nunca trafegam para o cliente.
+ * - `tentativa`: número desta tentativa (1..3).
+ * - `tentativas_restantes`: quantas ainda restam após esta.
+ * - `proxima_liberacao`: instante (UTC ISO) em que a próxima tentativa é
+ *   liberada, ou null se foi aprovado ou não há tentativas restantes.
+ */
+export interface QuizResult {
+  nota: number
+  aprovado: boolean
+  acertos: number
+  total: number
+  tentativa: number
+  tentativas_restantes: number
+  proxima_liberacao: string | null
+}
