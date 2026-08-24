@@ -49,14 +49,11 @@ function findCurrentLesson(module: Module, data: HomeData): Lesson | undefined {
 }
 
 /** Estado visual de uma aula dentro de um módulo liberado. */
-function lessonTileState(
-  lesson: Lesson,
-  currentLessonId: string | undefined,
-  data: HomeData,
-): TileState {
+function lessonTileState(lesson: Lesson, data: HomeData): TileState {
   if (data.concludedLessonIds.has(lesson.id)) return 'done'
-  if (lesson.id === currentLessonId) return 'current'
-  // Aulas de um módulo liberado são todas assistíveis; não travamos aula.
+  // Não existe estado "locked" para aula dentro de um módulo liberado: todas
+  // são assistíveis (o travamento é por MÓDULO, não por aula). Logo, qualquer
+  // aula não-concluída é 'current'.
   return 'current'
 }
 
@@ -94,6 +91,10 @@ export function HomePage() {
       const complete = data.modules.length > 0
       return { complete } as const
     }
+    // Invariante (ver useUnlock.ts): um módulo `current` NUNCA está `done`, logo
+    // sempre tem ao menos uma aula publicada não-concluída => `currentLesson`
+    // não é undefined aqui. O `if (heroModel.currentLesson)` no onAction abaixo
+    // é apenas defesa (narrowing de tipo), não um caso esperado.
     const currentLesson = findCurrentLesson(currentModule, data)
     return {
       complete: false,
@@ -101,6 +102,16 @@ export function HomePage() {
       currentLesson,
       progressPct: moduleProgressPct(currentModule, data),
     } as const
+  }, [data])
+
+  // Pré-computa o progresso (%) de cada módulo UMA vez por mudança de `data`,
+  // em vez de recomputar O(aulas) por módulo a cada render dentro do .map.
+  const progressByModule = useMemo(() => {
+    const map: Record<string, number> = {}
+    if (data) {
+      for (const m of data.modules) map[m.id] = moduleProgressPct(m, data)
+    }
+    return map
   }, [data])
 
   const showLoading = loading || isLoading
@@ -172,7 +183,7 @@ export function HomePage() {
                   subtitle={`Módulo ${m.ordem}`}
                   state={state}
                   coverUrl={m.capa_url ?? undefined}
-                  progressPct={moduleProgressPct(m, data)}
+                  progressPct={progressByModule[m.id] ?? 0}
                   onClick={() => {
                     // Só módulos liberados navegam; o Tile locked já ignora onClick.
                     const first = (data.lessonsByModule[m.id] ?? []).find(
@@ -195,11 +206,7 @@ export function HomePage() {
                     key={lesson.id}
                     title={lesson.titulo}
                     subtitle={`Aula ${lesson.ordem}`}
-                    state={lessonTileState(
-                      lesson,
-                      heroModel.currentLesson?.id,
-                      data,
-                    )}
+                    state={lessonTileState(lesson, data)}
                     onClick={() => navigate(`/aula/${lesson.id}`)}
                   />
                 ))}

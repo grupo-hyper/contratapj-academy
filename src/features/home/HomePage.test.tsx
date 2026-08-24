@@ -46,11 +46,18 @@ vi.mock('./useHomeData', () => ({
 import { HomePage } from './HomePage'
 
 // ---- Fixtures --------------------------------------------------------------
+// Títulos DISTINTOS do subtitle ("Módulo N") para que os getByRole por nome
+// casem inequivocamente no título do Tile, e não no subtítulo.
+const MODULE_TITLES: Record<number, string> = {
+  1: 'Introdução',
+  2: 'Prospecção',
+  3: 'Fechamento',
+}
 function mod(ordem: number): Module {
   return {
     id: `m${ordem}`,
     ordem,
-    titulo: `Módulo ${ordem}`,
+    titulo: MODULE_TITLES[ordem],
     descricao: `Descrição do módulo ${ordem}`,
     capa_url: null,
     publicado: true,
@@ -111,15 +118,15 @@ describe('HomePage — dashboard do aluno', () => {
     renderHome()
 
     // O módulo 1 (current) é acionável: seu botão NÃO tem aria-disabled.
-    const modulo1 = screen.getByRole('button', { name: /Módulo 1/i })
+    const modulo1 = screen.getByRole('button', { name: /Introdução/i })
     expect(modulo1).not.toHaveAttribute('aria-disabled')
 
     // O módulo 3 (locked) é não-acionável: aria-disabled presente.
-    const modulo3 = screen.getByRole('button', { name: /Módulo 3/i })
+    const modulo3 = screen.getByRole('button', { name: /Fechamento/i })
     expect(modulo3).toHaveAttribute('aria-disabled', 'true')
 
     // Módulo 2 também travado.
-    const modulo2 = screen.getByRole('button', { name: /Módulo 2/i })
+    const modulo2 = screen.getByRole('button', { name: /Prospecção/i })
     expect(modulo2).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -151,7 +158,7 @@ describe('HomePage — dashboard do aluno', () => {
     })
     renderHome()
 
-    fireEvent.click(screen.getByRole('button', { name: /Módulo 3/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Fechamento/i }))
     expect(navigateSpy).not.toHaveBeenCalled()
   })
 

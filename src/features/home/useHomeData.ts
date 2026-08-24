@@ -81,6 +81,9 @@ export interface UseHomeDataResult {
  * ficam desabilitadas e o hook reporta `isLoading`.
  */
 export function useHomeData(profileId: string | undefined): UseHomeDataResult {
+  // `modules`/`lessons` não dependem do usuário, mas são gated no mesmo `enabled`
+  // que `progress` de propósito: espera a auth resolver antes de buscar, evitando
+  // um flash de conteúdo sem o progresso do aluno já disponível.
   const enabled = Boolean(profileId)
 
   const modulesQuery = useQuery({
