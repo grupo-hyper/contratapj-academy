@@ -7,6 +7,7 @@
  *  - current → ativo/próximo (acento coral, mais destacado, claramente clicável)
  *  - locked  → bloqueado (dessaturado, cadeado, não-acionável)
  */
+import { CourseGlyph } from './CourseGlyph'
 import { ProgressBar } from './ProgressBar'
 
 export type TileState = 'done' | 'current' | 'locked'
@@ -16,6 +17,11 @@ interface TileProps {
   state: TileState
   subtitle?: string
   coverUrl?: string
+  /**
+   * Ordem do módulo (1–12) para a ilustração esculpida no placeholder quando
+   * não há `coverUrl`. Omitido → placeholder oceânico liso (aulas, p.ex.).
+   */
+  glyphOrder?: number
   /** Progresso 0–100. Só renderiza a barra quando informado. */
   progressPct?: number
   /** Ignorado no estado locked (tile não é acionável). */
@@ -63,6 +69,7 @@ export function Tile({
   state,
   subtitle,
   coverUrl,
+  glyphOrder,
   progressPct,
   onClick,
 }: TileProps) {
@@ -91,9 +98,11 @@ export function Tile({
             className="h-full w-full object-cover"
             loading="lazy"
           />
+        ) : glyphOrder !== undefined ? (
+          // Ilustração esculpida do módulo (direção Blue Ocean).
+          <CourseGlyph order={glyphOrder} />
         ) : (
-          // Placeholder "oceânico": degradê marinho + glow radial azul central,
-          // ecoando as capas ilustradas da referência Blue Ocean.
+          // Placeholder "oceânico" liso: degradê marinho + glow radial central.
           <div className="relative h-full w-full bg-gradient-to-br from-cpj-navy via-cpj-navy/60 to-cpj-bg">
             <div className="absolute inset-0 bg-[radial-gradient(70%_70%_at_50%_35%,rgb(66_89_223_/_0.35),transparent_70%)]" />
           </div>

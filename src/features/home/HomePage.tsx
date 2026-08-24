@@ -200,6 +200,7 @@ export function HomePage() {
                   subtitle={`Módulo ${m.ordem}`}
                   state={state}
                   coverUrl={m.capa_url ?? undefined}
+                  glyphOrder={m.ordem}
                   progressPct={progressByModule[m.id] ?? 0}
                   onClick={() => {
                     // Só módulos liberados navegam; o Tile locked já ignora onClick.
