@@ -19,7 +19,12 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import type { Lesson, Module, LessonProgress } from '../../types/content'
+import type {
+  Lesson,
+  Module,
+  LessonProgress,
+  QuizAttempt,
+} from '../../types/content'
 import { computeUnlockState, type UnlockStateMap } from './useUnlock'
 
 async function fetchModules(): Promise<Module[]> {
@@ -64,6 +69,52 @@ async function fetchProgress(profileId: string): Promise<LessonProgress[]> {
   return (data ?? []) as LessonProgress[]
 }
 
+/**
+ * Tentativas de quiz do usuário (todos os módulos). Alimentam o seam de quiz da
+ * trilha (`quizPassedByModule`) e o resumo `quizByModule` da Home.
+ * Degrada em PGRST205 exatamente como `fetchProgress` (0004 pode não estar
+ * aplicada no remoto ainda) — nesse caso o seam fica permissivo (nenhum módulo
+ * bloqueado por quiz), preservando o comportamento pré-Fase-4.
+ */
+async function fetchQuizAttempts(profileId: string): Promise<QuizAttempt[]> {
+  const { data, error } = await supabase
+    .from('quiz_attempts')
+    .select('*')
+    .eq('profile_id', profileId)
+  if (error) {
+    if (error.code === 'PGRST205') {
+      console.error(
+        '[home] tabela quiz_attempts ausente (aplicar supabase/migrations/0004_quiz.sql):',
+        error.message,
+      )
+      return []
+    }
+    throw error
+  }
+  return (data ?? []) as QuizAttempt[]
+}
+
+/**
+ * Ids dos módulos que TÊM questões cadastradas (ou seja, têm teste). Usado para
+ * decidir o seam de quiz: só um módulo COM teste pode ser bloqueado por quiz não
+ * aprovado — módulo sem questões nunca trava (permissivo). Só selecionamos
+ * `module_id` (barato); a RLS de `questions` já filtra por módulos publicados.
+ */
+async function fetchModulesWithQuiz(): Promise<Set<string>> {
+  const { data, error } = await supabase.from('questions').select('module_id')
+  if (error) {
+    if (error.code === 'PGRST205') {
+      console.error(
+        '[home] tabela questions ausente (aplicar supabase/migrations/0002_content.sql):',
+        error.message,
+      )
+      return new Set()
+    }
+    throw error
+  }
+  return new Set((data ?? []).map((r) => (r as { module_id: string }).module_id))
+}
+
 /** Agrupa aulas por `module_id`, preservando a ordem já vinda do banco. */
 function groupByModule(lessons: Lesson[]): Record<string, Lesson[]> {
   const map: Record<string, Lesson[]> = {}
@@ -73,11 +124,41 @@ function groupByModule(lessons: Lesson[]): Record<string, Lesson[]> {
   return map
 }
 
+/** Resumo por módulo das tentativas de quiz do usuário (para a UI da Home). */
+export interface ModuleQuizSummary {
+  attemptsUsed: number
+  passed: boolean
+  /** created_at (UTC ISO) da tentativa mais recente, ou null se nenhuma. */
+  lastAttemptAt: string | null
+}
+
 export interface HomeData {
   modules: Module[]
   lessonsByModule: Record<string, Lesson[]>
   concludedLessonIds: ReadonlySet<string>
   unlockState: UnlockStateMap
+  /** moduleId -> resumo de quiz (attemptsUsed/passed/lastAttemptAt). */
+  quizByModule: Record<string, ModuleQuizSummary>
+}
+
+/** Deriva o resumo de quiz por módulo a partir das tentativas cruas. */
+function summarizeQuiz(
+  attempts: QuizAttempt[],
+): Record<string, ModuleQuizSummary> {
+  const map: Record<string, ModuleQuizSummary> = {}
+  for (const a of attempts) {
+    const s = (map[a.module_id] ??= {
+      attemptsUsed: 0,
+      passed: false,
+      lastAttemptAt: null,
+    })
+    s.attemptsUsed += 1
+    if (a.aprovado) s.passed = true
+    if (!s.lastAttemptAt || a.created_at > s.lastAttemptAt) {
+      s.lastAttemptAt = a.created_at
+    }
+  }
+  return map
 }
 
 export interface UseHomeDataResult {
@@ -113,32 +194,74 @@ export function useHomeData(profileId: string | undefined): UseHomeDataResult {
     queryFn: () => fetchProgress(profileId as string),
     enabled,
   })
+  // Seam da Fase 4: tentativas de quiz do usuário. Mesma chave usada para
+  // invalidar em `useSubmitQuiz` (['quiz_attempts', profileId]) — passar o quiz
+  // faz esta query refazer e a trilha reavaliar o gate.
+  const quizQuery = useQuery({
+    queryKey: ['quiz_attempts', profileId],
+    queryFn: () => fetchQuizAttempts(profileId as string),
+    enabled,
+  })
+  const modulesWithQuizQuery = useQuery({
+    queryKey: ['modules_with_quiz'],
+    queryFn: fetchModulesWithQuiz,
+    enabled,
+  })
 
   const isLoading =
     !enabled ||
     modulesQuery.isLoading ||
     lessonsQuery.isLoading ||
-    progressQuery.isLoading
+    progressQuery.isLoading ||
+    quizQuery.isLoading ||
+    modulesWithQuizQuery.isLoading
   const isError =
-    modulesQuery.isError || lessonsQuery.isError || progressQuery.isError
-  const error = modulesQuery.error ?? lessonsQuery.error ?? progressQuery.error
+    modulesQuery.isError ||
+    lessonsQuery.isError ||
+    progressQuery.isError ||
+    quizQuery.isError ||
+    modulesWithQuizQuery.isError
+  const error =
+    modulesQuery.error ??
+    lessonsQuery.error ??
+    progressQuery.error ??
+    quizQuery.error ??
+    modulesWithQuizQuery.error
 
   const modules = modulesQuery.data
   const lessons = lessonsQuery.data
   const progress = progressQuery.data
+  const quizAttempts = quizQuery.data
+  const modulesWithQuiz = modulesWithQuizQuery.data
 
   let data: HomeData | undefined
-  if (modules && lessons && progress) {
+  if (modules && lessons && progress && quizAttempts && modulesWithQuiz) {
     const lessonsByModule = groupByModule(lessons)
     const concludedLessonIds = new Set(
       progress.filter((p) => p.concluida).map((p) => p.lesson_id),
     )
+    const quizByModule = summarizeQuiz(quizAttempts)
+    // Seam de quiz: moduleId -> aprovado?. `computeUnlockState` é PERMISSIVO na
+    // ausência da chave. Só módulos que TÊM teste entram no mapa: os aprovados
+    // com `true`, os NÃO aprovados com `false` (para travar a trilha até passar).
+    // Módulo sem questões não entra => não bloqueia.
+    const quizPassedByModule: Record<string, boolean> = {}
+    for (const moduleId of modulesWithQuiz) {
+      quizPassedByModule[moduleId] = quizByModule[moduleId]?.passed ?? false
+    }
     const unlockState = computeUnlockState({
       modules,
       lessonsByModule,
       concludedLessonIds,
+      quizPassedByModule,
     })
-    data = { modules, lessonsByModule, concludedLessonIds, unlockState }
+    data = {
+      modules,
+      lessonsByModule,
+      concludedLessonIds,
+      unlockState,
+      quizByModule,
+    }
   }
 
   return { data, isLoading, isError, error }

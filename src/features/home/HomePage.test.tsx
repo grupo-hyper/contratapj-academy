@@ -89,7 +89,7 @@ function buildData(): HomeData {
   // Nada concluído => m1 current, m2/m3 locked.
   const concludedLessonIds = new Set<string>()
   const unlockState = computeUnlockState({ modules, lessonsByModule, concludedLessonIds })
-  return { modules, lessonsByModule, concludedLessonIds, unlockState }
+  return { modules, lessonsByModule, concludedLessonIds, unlockState, quizByModule: {} }
 }
 
 function renderHome() {

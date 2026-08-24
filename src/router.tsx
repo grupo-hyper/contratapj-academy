@@ -8,6 +8,7 @@ import { RequireRole } from './auth/RequireRole'
 import { AutorStub, GestorStub } from './features/_stubs'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
+import { QuizPage } from './features/quiz/QuizPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -25,6 +26,15 @@ export const routes: RouteObject[] = [
     element: (
       <RequireRole>
         <LessonPage />
+      </RequireRole>
+    ),
+  },
+  {
+    // Motor do teste do módulo. Qualquer papel autenticado (como a Home/aula).
+    path: '/quiz/:moduleId',
+    element: (
+      <RequireRole>
+        <QuizPage />
       </RequireRole>
     ),
   },

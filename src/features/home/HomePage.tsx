@@ -17,7 +17,7 @@
  *    um módulo liberado).
  */
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { Hero } from '../../components/Hero'
 import { Row } from '../../components/Row'
@@ -40,6 +40,23 @@ function moduleProgressPct(
 /** Módulo `current` da trilha (o único não-concluído mais baixo liberado). */
 function findCurrentModule(data: HomeData): Module | undefined {
   return data.modules.find((m) => data.unlockState[m.id]?.state === 'current')
+}
+
+/**
+ * true quando o módulo já teve TODAS as aulas publicadas concluídas mas o quiz
+ * ainda não foi aprovado — ou seja, o único passo que falta é fazer o teste.
+ * (Um módulo `current` nesse estado ficou travado pelo seam de quiz.)
+ */
+function needsQuiz(module: Module, data: HomeData): boolean {
+  const published = (data.lessonsByModule[module.id] ?? []).filter(
+    (l) => l.publicado,
+  )
+  const allDone =
+    published.length > 0 &&
+    published.every((l) => data.concludedLessonIds.has(l.id))
+  const quiz = data.quizByModule[module.id]
+  const passed = quiz?.passed ?? false
+  return allDone && !passed
 }
 
 /** Primeira aula publicada NÃO concluída do módulo (a "próxima a assistir"). */
@@ -117,7 +134,7 @@ export function HomePage() {
   const showLoading = loading || isLoading
 
   return (
-    <main className="min-h-screen bg-cpj-bg text-cpj-white">
+    <main className="ocean-bg min-h-screen text-cpj-white">
       <TopNav userName={userName} role={role} onSignOut={signOut}>
         <span className="font-medium text-cpj-white">Início</span>
       </TopNav>
@@ -212,6 +229,29 @@ export function HomePage() {
                 ))}
             </Row>
           )}
+
+          {/* Seam Fase 4: aulas do módulo atual concluídas, falta o teste. */}
+          {heroModel &&
+            !heroModel.complete &&
+            heroModel.currentModule &&
+            needsQuiz(heroModel.currentModule, data) && (
+              <div className="rounded-2xl border border-cpj-coral/30 bg-cpj-navy/30 p-5 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-cpj-white">
+                    Você concluiu as aulas deste módulo.
+                  </p>
+                  <p className="mt-1 text-sm text-cpj-white/60">
+                    Faça o teste (nota mínima 80%) para liberar o próximo módulo.
+                  </p>
+                </div>
+                <Link
+                  to={`/quiz/${heroModel.currentModule.id}`}
+                  className="mt-4 inline-block rounded-xl bg-cpj-coral px-4 py-2.5 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral sm:mt-0"
+                >
+                  Fazer teste do módulo
+                </Link>
+              </div>
+            )}
         </div>
       )}
     </main>
