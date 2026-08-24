@@ -283,6 +283,14 @@ export function useSubmitQuiz(
       void queryClient.invalidateQueries({
         queryKey: ['quiz_attempts', profileId],
       })
+      // Aprovar o quiz emite um certificado no servidor (trigger AFTER INSERT de
+      // 0005 roda na transação de submit_quiz), então a lista de certificados
+      // também precisa refazer — senão o cache morno de /certificados
+      // (staleTime 60s) esconde o certificado recém-emitido. Invalidar sempre é
+      // inofensivo quando não houve aprovação.
+      void queryClient.invalidateQueries({
+        queryKey: ['certificates', profileId],
+      })
     },
   })
 

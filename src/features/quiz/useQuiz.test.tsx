@@ -73,6 +73,11 @@ describe('useSubmitQuiz', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['quiz_attempts_one', 'u1', 'm1'],
     })
+    // Aprovar emite um certificado no servidor => a lista de certificados
+    // (chave usada por useCertificates) também deve ser invalidada.
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['certificates', 'u1'],
+    })
   })
 
   it('P0004 (cooldown): rejeição tipada com nextAllowedAt parseado de details', async () => {
