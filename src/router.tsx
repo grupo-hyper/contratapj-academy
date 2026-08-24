@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import {
   createBrowserRouter,
   Navigate,
@@ -9,7 +10,28 @@ import { AutorStub, GestorStub } from './features/_stubs'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
 import { QuizPage } from './features/quiz/QuizPage'
-import { CertificatesPage } from './features/certificates/CertificatesPage'
+
+// Lazy-load só esta rota: tira o `pdf-lib` (+ deps) do bundle inicial eager.
+// As demais rotas seguem eager (padrão do repo, churn mínimo).
+const CertificatesPage = lazy(
+  () => import('./features/certificates/CertificatesPage'),
+)
+
+/**
+ * Fallback dark mínimo enquanto o chunk de /certificados carrega. Elemento (não
+ * componente) para não disparar o lint `only-export-components` neste módulo,
+ * que já exporta `routes`/`router` (não-componentes) de propósito. Mesmo visual
+ * do LoadingScreen de RequireRole.
+ */
+const routeFallback = (
+  <div
+    role="status"
+    aria-live="polite"
+    className="flex min-h-screen items-center justify-center bg-cpj-bg text-cpj-white"
+  >
+    Carregando…
+  </div>
+)
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -44,7 +66,9 @@ export const routes: RouteObject[] = [
     path: '/certificados',
     element: (
       <RequireRole>
-        <CertificatesPage />
+        <Suspense fallback={routeFallback}>
+          <CertificatesPage />
+        </Suspense>
       </RequireRole>
     ),
   },

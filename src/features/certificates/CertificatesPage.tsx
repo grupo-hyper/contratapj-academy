@@ -207,3 +207,7 @@ export function CertificatesPage() {
     </main>
   )
 }
+
+// Default export para o `React.lazy` no router (code-splitting: tira o pdf-lib
+// do bundle inicial). O named export acima é mantido para os testes.
+export default CertificatesPage

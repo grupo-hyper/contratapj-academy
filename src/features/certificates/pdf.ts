@@ -83,6 +83,25 @@ export async function buildCertificatePdf(
     color: CPJ_NAVY,
   })
 
+  // Largura útil dentro da moldura (com um respiro extra além da margem).
+  const usableWidth = width - margin * 2 - 48
+
+  // Escolhe o maior `size` (<= idealSize, >= minSize) em que o texto cabe na
+  // largura útil. Evita que nomes/títulos longos (campos editáveis pelo aluno)
+  // vazem silenciosamente para fora da moldura/página.
+  const fitFontSize = (
+    text: string,
+    font: typeof helv,
+    idealSize: number,
+    minSize: number,
+  ): number => {
+    let size = idealSize
+    while (size > minSize && font.widthOfTextAtSize(text, size) > usableWidth) {
+      size -= 1
+    }
+    return size
+  }
+
   // Helper: texto centrado horizontalmente.
   const drawCentered = (
     text: string,
@@ -134,15 +153,19 @@ export async function buildCertificatePdf(
   // "Certificamos que"
   drawCentered('Certificamos que', height / 2 + 70, 14, helv, CPJ_WHITE)
 
-  // Nome do aluno em destaque.
-  drawCentered(input.studentName, height / 2 + 30, 34, helvBold, CPJ_CORAL)
+  // Nome do aluno em destaque. `profile.nome` é editável pelo aluno e pode ser
+  // longo (vários sobrenomes) — auto-encolhe (34 → mín 18) para caber na moldura.
+  const nameSize = fitFontSize(input.studentName, helvBold, 34, 18)
+  drawCentered(input.studentName, height / 2 + 30, nameSize, helvBold, CPJ_CORAL)
 
-  // Descrição (módulo ou curso completo).
+  // Descrição (módulo ou curso completo). O título do módulo também pode ser
+  // longo — mesma proteção de fit (15 → mín 10).
   const desc =
     input.tipo === 'final'
       ? 'concluiu o Curso completo — 12 modulos'
       : `concluiu o modulo: ${input.moduleTitle ?? 'Modulo'}`
-  drawCentered(desc, height / 2 - 8, 15, helv, CPJ_WHITE)
+  const descSize = fitFontSize(desc, helv, 15, 10)
+  drawCentered(desc, height / 2 - 8, descSize, helv, CPJ_WHITE)
 
   // Nota (se houver).
   if (input.nota !== null) {
@@ -190,5 +213,7 @@ export function downloadPdf(bytes: Uint8Array, filename: string): void {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  // Revoga com atraso: em WebViews mobile/in-app (PWA-alvo) o salvamento é
+  // enfileirado async e um revoke no mesmo tick corre e cancela o download.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

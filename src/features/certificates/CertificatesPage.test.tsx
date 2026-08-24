@@ -106,6 +106,46 @@ describe('CertificatesPage', () => {
     expect(screen.getByText(/MODCODE/)).toBeInTheDocument()
   })
 
+  it('renderiza o branch de erro quando o hook falha', () => {
+    setHook({ isError: true })
+    renderPage()
+    expect(
+      screen.getByText(/não foi possível carregar seus certificados/i),
+    ).toBeInTheDocument()
+  })
+
+  it('gerar em uma linha não desabilita o botão de OUTRA linha (isolamento)', async () => {
+    // Build que fica pendente para a 1ª linha ficar "Gerando…" sem resolver.
+    let resolveBuild: (v: Uint8Array) => void = () => {}
+    buildCertificatePdfMock.mockReturnValue(
+      new Promise<Uint8Array>((res) => {
+        resolveBuild = res
+      }),
+    )
+    setHook({
+      certificates: [finalCert, moduleCert],
+      moduleTitleById: { m1: 'Prospecção Ativa' },
+      moduleOrderById: { m1: 1 },
+    })
+    renderPage()
+
+    const finalBtn = screen.getByRole('button', {
+      name: /baixar pdf do certificado final/i,
+    })
+    const moduleBtn = screen.getByRole('button', {
+      name: /baixar pdf do prospecção ativa/i,
+    })
+
+    fireEvent.click(finalBtn)
+
+    // A linha clicada entra em "Gerando…" (desabilitada); a outra continua ativa.
+    await waitFor(() => expect(finalBtn).toBeDisabled())
+    expect(moduleBtn).toBeEnabled()
+
+    // Encerra a promise pendente para não vazar entre testes.
+    resolveBuild(new Uint8Array([1]))
+  })
+
   it('clicar "Baixar PDF" chama buildCertificatePdf + downloadPdf com o filename esperado', async () => {
     const fakeBytes = new Uint8Array([1, 2, 3])
     buildCertificatePdfMock.mockResolvedValue(fakeBytes)
