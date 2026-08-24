@@ -8,12 +8,20 @@ import type { Role } from './auth/authContext'
 // maybeSingle (papel do perfil) pra dirigir o estado de auth por teste.
 const mocks = vi.hoisted(() => {
   const unsubscribe = vi.fn()
+  // O AuthProvider usa onAuthStateChange como única fonte da sessão: o mock
+  // captura o callback e emite a sessão inicial (INITIAL_SESSION).
+  const state: { initialSession?: unknown } = { initialSession: null }
+  const onAuthStateChange = vi.fn(
+    (cb: (event: string, session: unknown) => void) => {
+      queueMicrotask(() => cb('INITIAL_SESSION', state.initialSession ?? null))
+      return { data: { subscription: { unsubscribe } } }
+    },
+  )
   return {
     unsubscribe,
+    state,
     getSession: vi.fn(),
-    onAuthStateChange: vi.fn(() => ({
-      data: { subscription: { unsubscribe } },
-    })),
+    onAuthStateChange,
     maybeSingle: vi.fn(),
   }
 })
@@ -56,7 +64,7 @@ const FAKE_USER = { id: 'user-1', email: 'ana@contratapj.com.br' }
 
 /** Configura o mock para uma sessão autenticada com o papel dado. */
 function signedInAs(role: Role) {
-  mocks.getSession.mockResolvedValue({ data: { session: { user: FAKE_USER } } })
+  mocks.state.initialSession = { user: FAKE_USER }
   mocks.maybeSingle.mockResolvedValue({
     data: { id: 'user-1', nome: 'Ana', role, avatar_url: null },
     error: null,
@@ -65,7 +73,7 @@ function signedInAs(role: Role) {
 
 /** Configura o mock para nenhuma sessão. */
 function signedOut() {
-  mocks.getSession.mockResolvedValue({ data: { session: null } })
+  mocks.state.initialSession = null
   mocks.maybeSingle.mockResolvedValue({ data: null, error: null })
 }
 
@@ -86,9 +94,15 @@ function renderAt(path: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.onAuthStateChange.mockReturnValue({
-    data: { subscription: { unsubscribe: mocks.unsubscribe } },
-  })
+  mocks.state.initialSession = null
+  // Reinstala a implementação que captura e dispara o callback (clearAllMocks
+  // zera só o histórico; um mockReturnValue estático quebraria a emissão).
+  mocks.onAuthStateChange.mockImplementation(
+    (cb: (event: string, session: unknown) => void) => {
+      queueMicrotask(() => cb('INITIAL_SESSION', mocks.state.initialSession ?? null))
+      return { data: { subscription: { unsubscribe: mocks.unsubscribe } } }
+    },
+  )
 })
 
 afterEach(() => {

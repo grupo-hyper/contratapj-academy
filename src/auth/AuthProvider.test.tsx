@@ -7,12 +7,21 @@ import type { ReactNode } from 'react'
 // return values. maybeSingle() resolves to a fake profile by default.
 const mocks = vi.hoisted(() => {
   const unsubscribe = vi.fn()
+  // O AuthProvider passou a usar onAuthStateChange como ÚNICA fonte da sessão
+  // (sem getSession). O mock captura o callback e emite a sessão inicial
+  // (INITIAL_SESSION) de forma assíncrona, como o supabase-js real faz.
+  const state: { initialSession?: unknown } = { initialSession: null }
+  const onAuthStateChange = vi.fn(
+    (cb: (event: string, session: unknown) => void) => {
+      queueMicrotask(() => cb('INITIAL_SESSION', state.initialSession ?? null))
+      return { data: { subscription: { unsubscribe } } }
+    },
+  )
   return {
     unsubscribe,
+    state,
     getSession: vi.fn(),
-    onAuthStateChange: vi.fn(() => ({
-      data: { subscription: { unsubscribe } },
-    })),
+    onAuthStateChange,
     signInWithPassword: vi.fn(),
     signInWithOtp: vi.fn(),
     signOut: vi.fn(),
@@ -56,11 +65,10 @@ function wrapper({ children }: { children: ReactNode }) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Default: no session.
+  // Default: no session (o onAuthStateChange capturado emite INITIAL_SESSION
+  // com esta sessão; getSession não é mais usado pelo AuthProvider).
+  mocks.state.initialSession = null
   mocks.getSession.mockResolvedValue({ data: { session: null } })
-  mocks.onAuthStateChange.mockReturnValue({
-    data: { subscription: { unsubscribe: mocks.unsubscribe } },
-  })
   mocks.maybeSingle.mockResolvedValue({ data: FAKE_PROFILE, error: null })
   mocks.signInWithPassword.mockResolvedValue({ data: {}, error: null })
   mocks.signInWithOtp.mockResolvedValue({ data: {}, error: null })
@@ -80,9 +88,7 @@ describe('useAuth', () => {
   })
 
   it('resolves loading=false and exposes user + fetched profile from a session', async () => {
-    mocks.getSession.mockResolvedValue({
-      data: { session: { user: FAKE_USER } },
-    })
+    mocks.state.initialSession = { user: FAKE_USER }
 
     const { result } = renderHook(() => useAuth(), { wrapper })
 
@@ -93,9 +99,7 @@ describe('useAuth', () => {
   })
 
   it('signOut calls supabase.auth.signOut and clears user/profile', async () => {
-    mocks.getSession.mockResolvedValue({
-      data: { session: { user: FAKE_USER } },
-    })
+    mocks.state.initialSession = { user: FAKE_USER }
 
     const { result } = renderHook(() => useAuth(), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))

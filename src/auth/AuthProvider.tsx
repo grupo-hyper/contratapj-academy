@@ -43,31 +43,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     mounted.current = true
 
-    // 1. Resolve the initial session, then hydrate the profile.
-    supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
-        const sessionUser = data.session?.user ?? null
-        if (!mounted.current) return
-        setUser(sessionUser)
-        if (sessionUser) {
-          const p = await fetchProfile(sessionUser.id)
-          if (mounted.current) setProfile(p)
-        }
-      })
-      .finally(() => {
-        if (mounted.current) setLoading(false)
-      })
-
-    // 2. Keep user/profile in sync with auth state changes.
+    // Fonte ÚNICA de verdade da sessão: onAuthStateChange. Ao inscrever, o
+    // supabase-js emite SEMPRE um evento inicial (INITIAL_SESSION/SIGNED_IN) com
+    // a sessão persistida (ou null) — cobre boot e reload SEM uma chamada
+    // separada a getSession().
+    //
+    // DOIS BUGS que causavam "Carregando…" eterno ao recarregar já logado
+    // (evidência: reload não disparava NENHUM request e `loading` nunca virava
+    // false), corrigidos aqui:
+    //   1. getSession() + onAuthStateChange disputavam o mesmo lock de auth do
+    //      supabase-js; sob o double-mount do StrictMode a promise de
+    //      getSession() podia nunca resolver → o .finally() nunca rodava.
+    //      Fix: um único assinante (onAuthStateChange), sem getSession().
+    //   2. O callback do onAuthStateChange roda DENTRO do lock de auth. Dar
+    //      `await fetchProfile()` ali dentro reentra no lock (fetchProfile →
+    //      _useSession) e trava pra sempre → setLoading(false) nunca rodava.
+    //      Fix: liberar a UI (setLoading(false)) ANTES e buscar o perfil FORA
+    //      do callback (sem await), deixando o callback retornar e liberar o
+    //      lock antes da query do perfil.
     const { data: sub } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
+      (_event: AuthChangeEvent, session: Session | null) => {
         const sessionUser = session?.user ?? null
         if (!mounted.current) return
         setUser(sessionUser)
+        // Sessão resolvida (com ou sem usuário): libera a UI imediatamente.
+        if (mounted.current) setLoading(false)
         if (sessionUser) {
-          const p = await fetchProfile(sessionUser.id)
-          if (mounted.current) setProfile(p)
+          void fetchProfile(sessionUser.id).then((p) => {
+            if (mounted.current) setProfile(p)
+          })
         } else {
           setProfile(null)
         }
