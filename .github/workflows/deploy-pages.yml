@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+# Build da PWA (Vite) e publicação no GitHub Pages a cada push na main.
+# Requer: Settings -> Pages -> Source = "GitHub Actions" (habilitar uma vez).
+# Domínio custom (academy.contratapj.app.br) vem do arquivo public/CNAME.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Permissões que o deploy-pages exige.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Um deploy por vez; cancela o anterior em andamento.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Valores PÚBLICOS do cliente (o Vite os embute no bundle de qualquer forma).
+      # A anon key é role=anon — os dados são protegidos por RLS, não por segredo.
+      VITE_SUPABASE_URL: https://xbolgzabgtxzbpskokxj.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhib2xnemFiZ3R4emJwc2tva3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MDE1OTEsImV4cCI6MjEwMzA3NzU5MX0.Pzw7qHNoIh5_r1Qo9bFBD3F-JtiVl48xWfAXP-RtgE4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # SPA fallback: o Pages não tem rewrite server-side. Servindo 404.html como
+      # cópia do index.html, um deep-link (/certificados, /quiz/:id) carrega a app
+      # e o React Router resolve a rota no cliente.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
