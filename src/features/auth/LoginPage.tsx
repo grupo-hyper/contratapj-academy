@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 
 type Mode = 'senha' | 'link'
@@ -8,7 +9,7 @@ type Mode = 'senha' | 'link'
  * chama as ações do useAuth(), sem lógica de rota (Task 1.3).
  */
 export function LoginPage() {
-  const { signInWithPassword, signInWithMagicLink } = useAuth()
+  const { user, signInWithPassword, signInWithMagicLink } = useAuth()
 
   const [mode, setMode] = useState<Mode>('senha')
   const [email, setEmail] = useState('')
@@ -54,6 +55,9 @@ export function LoginPage() {
     setError(null)
     setLinkEnviado(false)
   }
+
+  // Já autenticado? Sai da tela de login e vai pra Home.
+  if (user) return <Navigate to="/" replace />
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-cpj-bg px-4 text-cpj-white">
