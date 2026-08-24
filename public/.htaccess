@@ -1,0 +1,46 @@
+# ContrataPJ Academy — Apache config para hospedagem ESTÁTICA (Umbler Sites).
+#
+# O Vite copia tudo em `public/` para `dist/` no build, então este arquivo vai
+# junto no artefato publicado e o Apache o lê na raiz do site.
+#
+# POR QUE: o app é uma SPA com BrowserRouter (createBrowserRouter). Rotas como
+# /quiz/:id, /certificados, /aula/:id só existem no cliente — no servidor esses
+# caminhos não são arquivos. Sem o rewrite abaixo, recarregar ou acessar direto
+# uma dessas URLs devolve 404. A regra manda todo caminho que NÃO seja um
+# arquivo/dir real cair no index.html, deixando o React Router resolver a rota.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Arquivo ou diretório existente (assets hasheados, sw.js, manifest, ícones):
+  # serve como está, sem reescrever.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Qualquer outra coisa: entrega o index.html (a SPA assume a rota).
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# Cache (PWA): assets são content-hashed (imutáveis) e podem ser cacheados por
+# muito tempo; index.html e o service worker NÃO podem ser cacheados agressivo,
+# senão um deploy novo não é percebido (usuário preso numa versão antiga).
+# -----------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  # HTML e service worker: sempre revalidar.
+  <FilesMatch "(index\.html|sw\.js|workbox-[^/]+\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+
+  # Assets versionados por hash no nome: cache longo e imutável.
+  <FilesMatch "\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# Compressão (se o módulo estiver disponível na Umbler).
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
