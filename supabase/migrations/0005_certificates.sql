@@ -107,6 +107,8 @@ create unique index if not exists uq_certificates_final
   where tipo = 'final';
 
 -- Índice de listagem: "Meus certificados" busca todos os do aluno (Task 4.4).
+-- Existe porque o uq_certificates_final é PARCIAL (WHERE tipo='final') e não
+-- serve a consulta "liste TODOS os meus certificados" (módulo + final).
 -- (O índice do codigo_verificacao já é criado pela constraint UNIQUE.)
 create index if not exists idx_certificates_profile_id
   on public.certificates (profile_id);
@@ -176,31 +178,51 @@ declare
   v_concluidos int;   -- nº de módulos publicados que o aluno já tem certificado
   v_media      int;   -- média das notas dos certificados de módulo (p/ o final)
 begin
-  -- a) Certificado do MÓDULO recém-aprovado. Guarda a nota da aprovação.
-  --    on conflict do nothing: se já existe (re-aprovação), mantém o PRIMEIRO.
-  insert into public.certificates (profile_id, tipo, module_id, nota)
-  values (new.profile_id, 'modulo', new.module_id, new.nota)
-  on conflict do nothing;
+  -- TRAVA DE CONCORRÊNCIA POR ALUNO (fecha a corrida cross-module do final).
+  -- Lock consultivo com escopo de TRANSAÇÃO, chaveado pelo PROFILE (não por
+  -- profile+module como em 0004). POR QUÊ: o lock de 0004 serializa apenas o
+  -- MESMO (usuário, módulo); duas chamadas de submit_quiz do MESMO aluno em
+  -- MÓDULOS DIFERENTES rodam de fato em paralelo. Sob READ COMMITTED, cada
+  -- trigger enxergaria só o próprio certificado de módulo recém-inserido (não o
+  -- do outro, ainda não commitado) — se fossem os DOIS últimos módulos, ambos
+  -- calculariam v_concluidos < v_publicados e NENHUM emitiria o final, deixando
+  -- o aluno para sempre sem certificado final (não há reavaliação posterior: o
+  -- final só é computado neste INSERT de quiz_attempts). Serializando por aluno,
+  -- o segundo trigger a rodar já enxerga o certificado de módulo COMMITADO pelo
+  -- primeiro e emite o final corretamente.
+  -- SEM DEADLOCK: chave/namespace diferente do lock de 0004 ('cert:' vs a chave
+  -- crua de 0004) e ordem de aquisição consistente — em submit_quiz o lock de
+  -- módulo de 0004 é SEMPRE tomado primeiro, e este lock por profile é tomado
+  -- depois, dentro do trigger AFTER.
+  perform pg_advisory_xact_lock(hashtext('cert:' || new.profile_id::text));
 
-  -- b) Conclusão do curso: aprovado em TODOS os módulos PUBLICADOS.
-  select count(*) into v_publicados
-    from public.modules
-   where publicado = true;
+  -- EMISSÃO FAIL-OPEN (escolha DELIBERADA). Este trigger é AFTER INSERT, na
+  -- MESMA transação do insert de submit_quiz; se o corpo de emissão levantasse
+  -- exceção, faria ROLLBACK da tentativa aprovada legitimamente. Hoje nenhum
+  -- caminho lança (os CHECKs são satisfeitos por construção e o on-conflict
+  -- absorve duplicatas), mas essa invariante é frágil. Envolvemos a emissão num
+  -- bloco exception que apenas EMITE WARNING e segue: uma falha de certificado
+  -- NÃO pode custar ao aluno o seu registro de aprovação.
+  -- CONTRASTE INTENCIONAL com handle_new_user (0001), que é FAIL-CLOSED: lá uma
+  -- falha DEVE abortar (não pode existir usuário órfão sem perfil); aqui um
+  -- certificado ausente jamais deve custar a aprovação. O advisory lock acima
+  -- fica FORA (antes) deste bloco de propósito.
+  begin
+    -- a) Certificado do MÓDULO recém-aprovado. Guarda a nota da aprovação.
+    --    on conflict do nothing (alvo explícito no índice único parcial): se já
+    --    existe (re-aprovação), mantém o PRIMEIRO.
+    insert into public.certificates (profile_id, tipo, module_id, nota)
+    values (new.profile_id, 'modulo', new.module_id, new.nota)
+    on conflict (profile_id, module_id) where tipo = 'modulo' do nothing;
 
-  -- Conta os certificados de módulo do aluno que apontam para módulos PUBLICADOS
-  -- (um certificado órfão de módulo despublicado/removido não conta).
-  select count(*) into v_concluidos
-    from public.certificates c
-    join public.modules m
-      on m.id = c.module_id
-     and m.publicado = true
-   where c.profile_id = new.profile_id
-     and c.tipo = 'modulo';
+    -- b) Conclusão do curso: aprovado em TODOS os módulos PUBLICADOS.
+    select count(*) into v_publicados
+      from public.modules
+     where publicado = true;
 
-  if v_publicados >= 1 and v_concluidos >= v_publicados then
-    -- Média (arredondada) das notas dos certificados de módulo do aluno para os
-    -- módulos publicados — nota "geral" exibida no certificado final.
-    select round(avg(c.nota))::int into v_media
+    -- Conta os certificados de módulo do aluno que apontam para módulos
+    -- PUBLICADOS (um certificado órfão de módulo despublicado/removido não conta).
+    select count(*) into v_concluidos
       from public.certificates c
       join public.modules m
         on m.id = c.module_id
@@ -208,12 +230,29 @@ begin
      where c.profile_id = new.profile_id
        and c.tipo = 'modulo';
 
-    -- 1 final por aluno (índice único parcial). on conflict do nothing torna a
-    -- emissão idempotente caso o gatilho reincida após a conclusão.
-    insert into public.certificates (profile_id, tipo, module_id, nota)
-    values (new.profile_id, 'final', null, v_media)
-    on conflict do nothing;
-  end if;
+    if v_publicados >= 1 and v_concluidos >= v_publicados then
+      -- Média (arredondada) das notas dos certificados de módulo do aluno para
+      -- os módulos publicados — nota "geral" exibida no certificado final.
+      select round(avg(c.nota))::int into v_media
+        from public.certificates c
+        join public.modules m
+          on m.id = c.module_id
+         and m.publicado = true
+       where c.profile_id = new.profile_id
+         and c.tipo = 'modulo';
+
+      -- 1 final por aluno (índice único parcial). on conflict do nothing (alvo
+      -- explícito) torna a emissão idempotente caso o gatilho reincida.
+      insert into public.certificates (profile_id, tipo, module_id, nota)
+      values (new.profile_id, 'final', null, v_media)
+      on conflict (profile_id) where tipo = 'final' do nothing;
+    end if;
+  exception
+    when others then
+      -- FAIL-OPEN: registra o problema mas NÃO propaga (preserva a tentativa).
+      raise warning 'emissão de certificado falhou (profile=%, module=%): %',
+        new.profile_id, new.module_id, sqlerrm;
+  end;
 
   return null; -- AFTER trigger: o valor de retorno é ignorado.
 end;
