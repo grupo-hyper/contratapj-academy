@@ -128,7 +128,13 @@ export function QuizPage() {
     if (gate?.passed && !result) {
       return (
         <Panel title="Módulo aprovado ✓">
-          Você já foi aprovado neste teste. Certificado disponível em breve.
+          <p>Você já foi aprovado neste teste.</p>
+          <Link
+            to="/certificados"
+            className="mt-4 inline-block rounded-lg bg-cpj-coral px-4 py-2 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90"
+          >
+            Ver meus certificados
+          </Link>
         </Panel>
       )
     }
@@ -156,11 +162,19 @@ export function QuizPage() {
             </p>
             <p className="mt-2 text-sm text-cpj-white/70">
               {result.aprovado
-                ? 'Certificado disponível em breve.'
+                ? 'Seu certificado já está disponível.'
                 : result.tentativas_restantes > 0
                   ? `Você ainda tem ${result.tentativas_restantes} tentativa(s).`
                   : 'Você atingiu o limite de tentativas.'}
             </p>
+            {result.aprovado && (
+              <Link
+                to="/certificados"
+                className="mt-4 inline-block rounded-lg bg-cpj-coral px-4 py-2 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90"
+              >
+                Ver meus certificados
+              </Link>
+            )}
             {!result.aprovado && result.proxima_liberacao && (
               <p className="mt-1 text-sm text-cpj-white/50">
                 Próxima tentativa liberada em{' '}

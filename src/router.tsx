@@ -9,6 +9,7 @@ import { AutorStub, GestorStub } from './features/_stubs'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
 import { QuizPage } from './features/quiz/QuizPage'
+import { CertificatesPage } from './features/certificates/CertificatesPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -35,6 +36,15 @@ export const routes: RouteObject[] = [
     element: (
       <RequireRole>
         <QuizPage />
+      </RequireRole>
+    ),
+  },
+  {
+    // Tela "Meus certificados". Qualquer papel autenticado (como a Home).
+    path: '/certificados',
+    element: (
+      <RequireRole>
+        <CertificatesPage />
       </RequireRole>
     ),
   },
