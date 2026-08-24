@@ -64,3 +64,18 @@ export interface QuestionOptionPublic {
   question_id: string
   texto: string
 }
+
+/**
+ * Progresso do aluno em uma aula. Tabela `lesson_progress`
+ * (ver `supabase/migrations/0003_progress.sql`). unique(profile_id, lesson_id).
+ * Owner-only via RLS: cada usuário só lê/escreve as próprias linhas.
+ * `pct` é 0..100; `concluida = true` conta a aula como concluída para a trilha.
+ */
+export interface LessonProgress {
+  id: string
+  profile_id: string
+  lesson_id: string
+  pct: number
+  concluida: boolean
+  updated_at: string
+}
