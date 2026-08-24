@@ -36,7 +36,19 @@ vi.mock('./lib/supabase', () => {
   }
 })
 
+// A Home usa react-query; mockamos o hook de dados para não tocar a rede e
+// para renderizar um estado estável (sem módulos => marcador previsível).
+vi.mock('./features/home/useHomeData', () => ({
+  useHomeData: () => ({
+    data: { modules: [], lessonsByModule: {}, concludedLessonIds: new Set(), unlockState: {} },
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}))
+
 // Importa DEPOIS do mock registrado.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthProvider'
 import { routes } from './router'
 
@@ -57,12 +69,17 @@ function signedOut() {
   mocks.maybeSingle.mockResolvedValue({ data: null, error: null })
 }
 
-/** Renderiza o app no caminho dado, dentro do AuthProvider. */
+/** Renderiza o app no caminho dado, dentro do AuthProvider + QueryClient. */
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <AuthProvider>
-      <RouterProvider router={router} />
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
     </AuthProvider>,
   )
 }
@@ -86,14 +103,14 @@ describe('router + RequireRole', () => {
     expect(
       await screen.findByRole('heading', { name: /contratapj academy/i }),
     ).toBeInTheDocument()
-    expect(screen.queryByText(/início do aluno/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nenhum módulo publicado/i)).not.toBeInTheDocument()
   })
 
   it('aluno em /gestor é bloqueado (cai na home)', async () => {
     signedInAs('aluno')
     renderAt('/gestor')
 
-    expect(await screen.findByText(/início do aluno/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
     expect(screen.queryByText(/painel do gestor/i)).not.toBeInTheDocument()
   })
 
@@ -101,7 +118,7 @@ describe('router + RequireRole', () => {
     signedInAs('aluno')
     renderAt('/autor')
 
-    expect(await screen.findByText(/início do aluno/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
     expect(screen.queryByText(/cms do autor/i)).not.toBeInTheDocument()
   })
 
@@ -109,7 +126,7 @@ describe('router + RequireRole', () => {
     signedInAs('gestor')
     renderAt('/autor')
 
-    expect(await screen.findByText(/início do aluno/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
     expect(screen.queryByText(/cms do autor/i)).not.toBeInTheDocument()
   })
 
@@ -131,13 +148,13 @@ describe('router + RequireRole', () => {
     signedInAs('aluno')
     renderAt('/')
 
-    expect(await screen.findByText(/início do aluno/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
   })
 
   it('rota desconhecida cai na home', async () => {
     signedInAs('aluno')
     renderAt('/rota-que-nao-existe')
 
-    expect(await screen.findByText(/início do aluno/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
   })
 })

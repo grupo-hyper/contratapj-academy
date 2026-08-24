@@ -5,7 +5,8 @@ import {
 } from 'react-router-dom'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
-import { AutorStub, GestorStub, HomeStub } from './features/_stubs'
+import { AutorStub, GestorStub } from './features/_stubs'
+import { HomePage } from './features/home/HomePage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -13,7 +14,7 @@ export const routes: RouteObject[] = [
     path: '/',
     element: (
       <RequireRole>
-        <HomeStub />
+        <HomePage />
       </RequireRole>
     ),
   },
