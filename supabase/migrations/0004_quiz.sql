@@ -69,14 +69,16 @@ create table if not exists public.quiz_attempts (
   module_id  uuid not null references public.modules  (id) on delete cascade,
   nota       int  not null check (nota between 0 and 100),
   aprovado   boolean not null,
-  respostas  jsonb not null,
+  -- DEFENSIVO: `respostas` DEVE ser um objeto JSON (mapa question_id->option_id).
+  -- O check impede gravar array/escalar/null-json, mesmo que a RPC seja alterada.
+  respostas  jsonb not null check (jsonb_typeof(respostas) = 'object'),
   created_at timestamptz not null default now()
 );
 
 comment on table  public.quiz_attempts is 'Tentativas de quiz por (usuário, módulo). Criadas SOMENTE pela RPC submit_quiz (SECURITY DEFINER). Dono lê as suas; gestor/autor leem todas.';
 comment on column public.quiz_attempts.profile_id is 'Dono da tentativa; = profiles.id = auth.uid().';
 comment on column public.quiz_attempts.nota is 'Nota 0..100 calculada no servidor por submit_quiz.';
-comment on column public.quiz_attempts.aprovado is 'true se a nota atingiu o limite de aprovação vigente na correção.';
+comment on column public.quiz_attempts.aprovado is 'true se a nota atingiu o limite de aprovação (c_pass_pct em submit_quiz) vigente na correção. Sem constraint que fixe o limite no schema — o corte é configurável na RPC.';
 comment on column public.quiz_attempts.respostas is 'Respostas enviadas (jsonb: question_id -> option_id) para auditoria. NÃO contém gabarito.';
 comment on column public.quiz_attempts.created_at is 'Instante da tentativa (UTC). Base para o cooldown de 24h. Exibição em BRT.';
 
@@ -135,6 +137,16 @@ create policy quiz_attempts_select
 -- um search_path malicioso do chamador redirecione as tabelas para objetos
 -- forjados (prática recomendada para SECURITY DEFINER, igual a 0001/0003).
 --
+-- CÓDIGOS DE ERRO (SQLSTATE) — o cliente (Fase 4.2) deve ramificar por ESTES
+-- códigos, não pelo texto PT-BR da mensagem:
+--   42501  não autenticado (sem auth.uid()).
+--   P0002  módulo inexistente ou não publicado (indisponível para avaliação).
+--   P0003  limite de tentativas atingido (mostrar "tentativas esgotadas").
+--   P0004  cooldown ativo (mostrar contagem regressiva). O instante em que a
+--          próxima tentativa é liberada vem em ERRDETAIL como ISO-8601 UTC
+--          (o FE lê `detail`, não faz parse do texto da mensagem).
+--   P0005  módulo sem questões cadastradas.
+--
 -- ORDEM DAS VERIFICAÇÕES: autenticação -> módulo publicado -> limite de
 -- tentativas -> cooldown -> existência de questões -> correção -> gravação.
 -- Fazemos as travas ANTES de corrigir para não revelar nada (nem gravar linha)
@@ -173,13 +185,26 @@ begin
     raise exception 'Não autenticado.' using errcode = '42501'; -- insufficient_privilege
   end if;
 
+  -- 1.1) TRAVA DE CONCORRÊNCIA (fecha a corrida check-then-insert).
+  -- pg_advisory_xact_lock é um lock consultivo com escopo de TRANSAÇÃO: liberado
+  -- automaticamente no commit/rollback, sem mudança de schema. Serializa as
+  -- chamadas de submit_quiz do MESMO (usuário, módulo) — duplo clique, retry de
+  -- rede, duas abas — de modo que a seção crítica inteira (ler contagem/cooldown
+  -- -> decidir -> inserir) roda uma de cada vez. Sem ela, duas chamadas
+  -- concorrentes poderiam ambas passar pelo teto de tentativas / cooldown e
+  -- inserir, estourando as 3 tentativas ou driblando a espera de 24h. A RPC roda
+  -- na sua própria transação (chamada de statement único), então o lock cobre
+  -- toda a seção crítica até o commit. hashtext() reduz a chave composta a um
+  -- int8 (o parâmetro do lock).
+  perform pg_advisory_xact_lock(hashtext(v_uid::text || ':' || p_module_id::text));
+
   -- 2) Módulo precisa existir E estar publicado (aluno só faz quiz de publicado).
   if not exists (
     select 1 from public.modules m
     where m.id = p_module_id
       and m.publicado = true
   ) then
-    raise exception 'Módulo indisponível para avaliação.' using errcode = 'P0001';
+    raise exception 'Módulo indisponível para avaliação.' using errcode = 'P0002';
   end if;
 
   -- 3) Limite de tentativas: conta as já existentes para (usuário, módulo).
@@ -193,14 +218,17 @@ begin
 
   if v_attempts >= c_max_attempts then
     raise exception 'Limite de % tentativas atingido para este módulo.', c_max_attempts
-      using errcode = 'P0001';
+      using errcode = 'P0003';
   end if;
 
   -- 4) Cooldown: se a última tentativa foi há menos de c_cooldown, barra e
-  --    informa quando a próxima é liberada.
+  --    informa quando a próxima é liberada. O instante liberado (ISO-8601 UTC)
+  --    vai em DETAIL (o FE lê `detail`, não parseia a mensagem); a mensagem fica
+  --    com o texto amigável em PT-BR.
   if v_last is not null and (now() - v_last) < c_cooldown then
-    raise exception 'Aguarde até % para tentar novamente.', to_char((v_last + c_cooldown) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-      using errcode = 'P0001';
+    raise exception 'Aguarde antes de tentar novamente.'
+      using errcode = 'P0004',
+            detail  = to_char((v_last + c_cooldown) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"');
   end if;
 
   -- 5) Correção. Total de questões do módulo (fonte da verdade do denominador).
@@ -209,7 +237,7 @@ begin
    where q.module_id = p_module_id;
 
   if v_total = 0 then
-    raise exception 'Módulo sem questões cadastradas.' using errcode = 'P0001';
+    raise exception 'Módulo sem questões cadastradas.' using errcode = 'P0005';
   end if;
 
   -- Conta acertos: para cada questão DO MÓDULO, pega a alternativa correta
