@@ -78,18 +78,38 @@ function lesson(id: string, moduleId: string, ordem: number): Lesson {
   }
 }
 
-/** Monta um HomeData de 3 módulos onde o módulo 1 é o current e 2/3 travados. */
-function buildData(): HomeData {
+/**
+ * Monta um HomeData de 3 módulos onde o módulo 1 é o current e 2/3 travados.
+ * `concluded` permite pré-concluir aulas (para exercitar o seam de quiz) e
+ * `quizByModule` semeia o resumo de quiz (aprovado/não). O `unlockState` é
+ * derivado com `quizPassedByModule` coerente para que a trilha e o CTA batam.
+ */
+function buildData(opts?: {
+  concluded?: string[]
+  quizByModule?: HomeData['quizByModule']
+}): HomeData {
   const modules = [mod(1), mod(2), mod(3)]
   const lessonsByModule = {
     m1: [lesson('l1a', 'm1', 1), lesson('l1b', 'm1', 2)],
     m2: [lesson('l2a', 'm2', 1)],
     m3: [lesson('l3a', 'm3', 1)],
   }
-  // Nada concluído => m1 current, m2/m3 locked.
-  const concludedLessonIds = new Set<string>()
-  const unlockState = computeUnlockState({ modules, lessonsByModule, concludedLessonIds })
-  return { modules, lessonsByModule, concludedLessonIds, unlockState, quizByModule: {} }
+  const concludedLessonIds = new Set<string>(opts?.concluded ?? [])
+  const quizByModule = opts?.quizByModule ?? {}
+  // Espelha o que o useHomeData faz: só módulos COM resumo de quiz entram no
+  // mapa de aprovação (aprovados true, demais false) — os outros ficam ausentes
+  // (permissivo). Assim o `current`/`done` do teste bate com o comportamento real.
+  const quizPassedByModule: Record<string, boolean> = {}
+  for (const [moduleId, s] of Object.entries(quizByModule)) {
+    quizPassedByModule[moduleId] = s.passed
+  }
+  const unlockState = computeUnlockState({
+    modules,
+    lessonsByModule,
+    concludedLessonIds,
+    quizPassedByModule,
+  })
+  return { modules, lessonsByModule, concludedLessonIds, unlockState, quizByModule }
 }
 
 function renderHome() {
@@ -171,5 +191,44 @@ describe('HomePage — dashboard do aluno', () => {
     })
     const { container } = renderHome()
     expect(container.querySelector('.animate-pulse')).toBeTruthy()
+  })
+
+  it('aulas do módulo atual concluídas + quiz NÃO aprovado => mostra CTA "Fazer teste do módulo" com link certo', () => {
+    // Todas as aulas publicadas do m1 concluídas, mas quiz não passou => m1
+    // permanece current (travado pelo seam) e o CTA do teste aparece.
+    useHomeDataMock.mockReturnValue({
+      data: buildData({
+        concluded: ['l1a', 'l1b'],
+        quizByModule: { m1: { attemptsUsed: 1, passed: false, lastAttemptAt: null } },
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+    renderHome()
+
+    expect(
+      screen.getByText(/você concluiu as aulas deste módulo/i),
+    ).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /fazer teste do módulo/i })
+    expect(link).toHaveAttribute('href', '/quiz/m1')
+  })
+
+  it('aulas concluídas + quiz APROVADO => NÃO mostra o CTA do teste', () => {
+    // Com o quiz aprovado, m1 fica done e o CTA some (nada falta no módulo).
+    useHomeDataMock.mockReturnValue({
+      data: buildData({
+        concluded: ['l1a', 'l1b'],
+        quizByModule: { m1: { attemptsUsed: 1, passed: true, lastAttemptAt: null } },
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+    renderHome()
+
+    expect(
+      screen.queryByRole('link', { name: /fazer teste do módulo/i }),
+    ).not.toBeInTheDocument()
   })
 })

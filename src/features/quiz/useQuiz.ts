@@ -57,6 +57,11 @@ function shuffle<T>(items: readonly T[]): T[] {
 }
 
 async function fetchQuizQuestions(moduleId: string): Promise<QuizQuestion[]> {
+  // ASSIMETRIA DE PGRST205 (intencional): diferente de `fetchAttempts` abaixo,
+  // aqui NÃO degradamos em PGRST205. `questions` e `question_options_public` vêm
+  // da migration 0002 (pré-existente, sempre aplicada); `quiz_attempts` vem da
+  // 0004 (pode não estar aplicada no remoto ainda). Logo uma tabela de questões
+  // ausente é um erro GENUÍNO — falhar alto é o comportamento desejado.
   // 1) Questões do módulo. `questions` não tem coluna `ordem`; ordenamos por
   //    created_at para uma base estável antes de embaralhar.
   const { data: questions, error: qErr } = await supabase
