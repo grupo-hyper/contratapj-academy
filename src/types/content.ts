@@ -99,6 +99,31 @@ export interface QuizAttempt {
 }
 
 /**
+ * Certificado emitido. Tabela `certificates`
+ * (ver `supabase/migrations/0005_certificates.sql`).
+ * Emitido SOMENTE pelo trigger `emit_certificates_on_pass` (SECURITY DEFINER)
+ * quando o aluno é aprovado no quiz: o cliente não tem policy de INSERT/UPDATE/
+ * DELETE (não é possível forjar). Dono lê os seus; gestor/autor leem todos via
+ * RLS.
+ * - `tipo`: 'modulo' (1 por aluno/módulo, na 1ª aprovação) ou 'final' (1 por
+ *   aluno, ao concluir TODOS os módulos publicados).
+ * - `module_id`: preenchido para 'modulo'; sempre `null` para 'final'.
+ * - `nota`: para 'modulo', a nota da aprovação; para 'final', a média
+ *   (arredondada) das notas dos certificados de módulo.
+ * - `codigo_verificacao`: código público (32 hex maiúsculos), único e
+ *   compartilhável, para verificação do certificado.
+ */
+export interface Certificate {
+  id: string
+  profile_id: string
+  tipo: 'modulo' | 'final'
+  module_id: string | null
+  nota: number | null
+  codigo_verificacao: string
+  created_at: string
+}
+
+/**
  * Payload enviado à RPC `submit_quiz`: mapa question_id -> option_id (uuid como
  * texto). Questão ausente é contada como errada no servidor.
  */
