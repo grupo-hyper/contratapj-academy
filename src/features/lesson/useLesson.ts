@@ -40,7 +40,18 @@ async function fetchProgress(
     .eq('profile_id', profileId)
     .eq('lesson_id', lessonId)
     .maybeSingle()
-  if (error) throw error
+  if (error) {
+    // PGRST205 = tabela ausente no schema cache (migration 0003 ainda não
+    // aplicada no remoto). Degrada para "sem progresso" em vez de quebrar o player.
+    if (error.code === 'PGRST205') {
+      console.error(
+        '[lesson] tabela lesson_progress ausente (aplicar supabase/migrations/0003_progress.sql):',
+        error.message,
+      )
+      return null
+    }
+    throw error
+  }
   return (data ?? null) as LessonProgress | null
 }
 

@@ -48,7 +48,19 @@ async function fetchProgress(profileId: string): Promise<LessonProgress[]> {
     .from('lesson_progress')
     .select('*')
     .eq('profile_id', profileId)
-  if (error) throw error
+  if (error) {
+    // PGRST205 = tabela ausente no schema cache (migration 0003 ainda não
+    // aplicada no remoto). Degrada para "sem progresso" em vez de derrubar a
+    // Home inteira — a trilha renderiza com tudo zerado.
+    if (error.code === 'PGRST205') {
+      console.error(
+        '[home] tabela lesson_progress ausente (aplicar supabase/migrations/0003_progress.sql):',
+        error.message,
+      )
+      return []
+    }
+    throw error
+  }
   return (data ?? []) as LessonProgress[]
 }
 
