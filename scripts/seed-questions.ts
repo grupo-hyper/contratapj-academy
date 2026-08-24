@@ -87,6 +87,17 @@ async function main(): Promise<void> {
     )
   }
 
+  // O @supabase/supabase-js instancia um RealtimeClient no construtor, que exige
+  // um WebSocket GLOBAL — ausente no Node 20 (só nativo a partir do Node 22).
+  // O seed usa apenas REST, mas o construtor falha sem WebSocket; fornecemos um
+  // via o pacote `ws` (devDependency) antes de criar o client. Assim o script é
+  // self-contained (não precisa do antigo `--import ./wspoly.mjs`).
+  const g = globalThis as Record<string, unknown>
+  if (typeof g.WebSocket === 'undefined') {
+    const wsmod = (await import('ws')) as { default?: unknown; WebSocket?: unknown }
+    g.WebSocket = wsmod.default ?? wsmod.WebSocket
+  }
+
   const { createClient } = await import('@supabase/supabase-js')
   const db = createClient(url, serviceKey, { auth: { persistSession: false } })
 
