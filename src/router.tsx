@@ -7,6 +7,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
 import { AutorStub, GestorStub } from './features/_stubs'
 import { HomePage } from './features/home/HomePage'
+import { LessonPage } from './features/lesson/LessonPage'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
@@ -15,6 +16,15 @@ export const routes: RouteObject[] = [
     element: (
       <RequireRole>
         <HomePage />
+      </RequireRole>
+    ),
+  },
+  {
+    // Player da aula. Qualquer papel autenticado (como a Home): sem `allow`.
+    path: '/aula/:lessonId',
+    element: (
+      <RequireRole>
+        <LessonPage />
       </RequireRole>
     ),
   },
