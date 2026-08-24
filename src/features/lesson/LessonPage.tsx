@@ -39,8 +39,15 @@ export function LessonPage() {
   const userName = profile?.nome ?? user?.email ?? 'Aluno'
   const role = profile?.role
 
-  const { lesson, concluida, isLoading, isError, markConcluded, isMarking } =
-    useLesson(lessonId, profileId)
+  const {
+    lesson,
+    concluida,
+    isLoading,
+    isError,
+    markConcluded,
+    isMarking,
+    isMarkError,
+  } = useLesson(lessonId, profileId)
 
   const showLoading = loading || isLoading
 
@@ -96,14 +103,23 @@ export function LessonPage() {
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={markConcluded}
-                disabled={isMarking}
-                className="w-full rounded-xl bg-cpj-coral px-4 py-3 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral disabled:opacity-60 sm:w-auto"
-              >
-                {isMarking ? 'Salvando…' : 'Marcar como concluída'}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={markConcluded}
+                  disabled={isMarking}
+                  aria-busy={isMarking}
+                  className="w-full rounded-xl bg-cpj-coral px-4 py-3 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral disabled:opacity-60 sm:w-auto"
+                >
+                  {isMarking ? 'Salvando…' : 'Marcar como concluída'}
+                </button>
+                {/* Falha do upsert (RLS/rede): botão continua clicável p/ retry. */}
+                {isMarkError && (
+                  <p role="alert" className="text-sm text-cpj-coral">
+                    Não foi possível salvar. Tente novamente.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </article>

@@ -79,6 +79,10 @@ export interface UseLessonResult {
   /** Marca a aula como concluída (upsert 100% + invalida a Home). */
   markConcluded: () => void
   isMarking: boolean
+  /** true se o upsert de conclusão falhou (RLS/rede) — para feedback na UI. */
+  isMarkError: boolean
+  /** Erro da última tentativa de conclusão (se houver). */
+  markError: unknown
 }
 
 /**
@@ -131,5 +135,7 @@ export function useLesson(
     error: lessonQuery.error ?? progressQuery.error,
     markConcluded: () => mutation.mutate(),
     isMarking: mutation.isPending,
+    isMarkError: mutation.isError,
+    markError: mutation.error,
   }
 }

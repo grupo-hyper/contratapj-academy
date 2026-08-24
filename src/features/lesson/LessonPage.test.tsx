@@ -137,6 +137,27 @@ describe('LessonPage — player da aula', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('mostra mensagem de erro quando a conclusão falha (não engole o erro)', () => {
+    useLessonMock.mockReturnValue({
+      lesson: baseLesson(),
+      concluida: false,
+      isLoading: false,
+      isError: false,
+      markConcluded: vi.fn(),
+      isMarking: false,
+      isMarkError: true,
+    })
+    renderPage()
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /não foi possível salvar/i,
+    )
+    // O botão continua clicável para retry (não desabilitado).
+    expect(
+      screen.getByRole('button', { name: /marcar como concluída/i }),
+    ).toBeEnabled()
+  })
+
   it('mostra estado de não encontrada quando a aula não existe', () => {
     useLessonMock.mockReturnValue({
       lesson: null,
