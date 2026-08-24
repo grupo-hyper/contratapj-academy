@@ -64,8 +64,39 @@ comment on column public.lesson_progress.updated_at is 'Última atualização (U
 create index if not exists idx_lesson_progress_profile_id on public.lesson_progress (profile_id);
 create index if not exists idx_lesson_progress_lesson_id  on public.lesson_progress (lesson_id);
 
+-- -----------------------------------------------------------------------------
+-- 3) Trigger: mantém `updated_at` sempre atual em UPDATE
+-- -----------------------------------------------------------------------------
+-- POR QUE: `updated_at` só ganha `default now()` no INSERT. Num UPDATE que não
+-- inclua explicitamente a coluna (ex.: um upsert que só toca `pct`/`concluida`),
+-- o valor ficaria STALE. Como esse instante é dado que alimenta a lógica de
+-- trilha/ordenação no app, forçamos `new.updated_at = now()` a cada UPDATE.
+-- SECURITY DEFINER + set search_path = public seguindo o estilo dos triggers de
+-- 0001 (defesa contra search_path malicioso). Idempotente:
+-- create or replace function + drop trigger if exists antes de create trigger.
+create or replace function public.lesson_progress_touch_updated_at()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path = public
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+comment on function public.lesson_progress_touch_updated_at() is
+  'Trigger BEFORE UPDATE em lesson_progress: força updated_at = now() para o campo nunca ficar stale.';
+
+drop trigger if exists trg_lesson_progress_touch_updated_at on public.lesson_progress;
+create trigger trg_lesson_progress_touch_updated_at
+  before update on public.lesson_progress
+  for each row
+  execute function public.lesson_progress_touch_updated_at();
+
 -- =============================================================================
--- 3) Row Level Security — OWNER-ONLY
+-- 4) Row Level Security — OWNER-ONLY
 -- =============================================================================
 -- Cada usuário só enxerga e só mexe nas próprias linhas. RLS nega por padrão o
 -- que não for explicitamente liberado; abaixo liberamos apenas o próprio dono.

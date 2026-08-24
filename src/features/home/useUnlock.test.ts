@@ -145,6 +145,35 @@ describe('computeUnlockState — trilha sequencial travada', () => {
     expect(state.m3.state).toBe('locked')
   })
 
+  it('curso vazio (sem módulos) retorna mapa vazio', () => {
+    const state = computeUnlockState({
+      modules: [],
+      lessonsByModule: {},
+      concludedLessonIds: new Set<string>(),
+    })
+    expect(state).toEqual({})
+  })
+
+  it('ordenação é determinística quando dois módulos têm o mesmo `ordem` (desempate por id)', () => {
+    // Ambos com ordem=1; entrada em ordem "errada" (mb antes de ma).
+    const ma = { ...mod(1), id: 'ma' }
+    const mb = { ...mod(1), id: 'mb' }
+    const lessonsByModule = {
+      ma: [lesson('la', 'ma', 1)],
+      mb: [lesson('lb', 'mb', 1)],
+    }
+    const state = computeUnlockState({
+      modules: [mb, ma], // desordenado de propósito
+      lessonsByModule,
+      concludedLessonIds: new Set<string>(),
+    })
+
+    // Desempate por id (localeCompare): 'ma' < 'mb', então 'ma' é o 1º → current;
+    // 'mb' fica locked. Resultado estável e previsível, independe da inserção.
+    expect(state.ma).toMatchObject({ state: 'current', unlocked: true })
+    expect(state.mb).toMatchObject({ state: 'locked', unlocked: false })
+  })
+
   // ---- SEAM da Fase 4: gate de aprovação no quiz --------------------------
   // A tabela de tentativas de quiz NÃO existe ainda (chega na Fase 4). Hoje o
   // gate concreto é "todas as aulas publicadas concluídas". O parâmetro

@@ -28,10 +28,16 @@
  *  esse mapa a partir da sua fonte de aprovação; nenhuma referência a tabela de
  *  quiz é feita aqui (ela ainda não existe).
  */
+import type { TileState } from '../../components/Tile'
 import type { Lesson, Module } from '../../types/content'
 
-/** Estado de liberação de um módulo, alinhado a `TileState` do componente Tile. */
-export type ModuleUnlockState = 'done' | 'current' | 'locked'
+/**
+ * Estado de liberação de um módulo. Derivado de `TileState` (o union do
+ * componente Tile) em vez de redeclarado, para que os dois não possam divergir
+ * silenciosamente: se o Tile mudar seus estados, isto acompanha (ou quebra o
+ * build), garantido pelo compilador — não só por comentário.
+ */
+export type ModuleUnlockState = TileState
 
 /** Resultado por módulo. `state` espelha os três estados visuais do Tile. */
 export interface ModuleUnlock {
@@ -50,7 +56,13 @@ export type UnlockStateMap = Record<string, ModuleUnlock>
 export interface ComputeUnlockInput {
   /** Módulos (qualquer ordem na entrada; a função ordena por `ordem`). */
   modules: Module[]
-  /** Aulas agrupadas por module_id. Só as PUBLICADAS contam para a conclusão. */
+  /**
+   * Aulas agrupadas por module_id. Só as PUBLICADAS contam para a conclusão.
+   * PRÉ-CONDIÇÃO: a função CONFIA neste agrupamento e NÃO valida que cada
+   * `lesson.module_id === module.id` — ela apenas lê `lessonsByModule[module.id]`.
+   * Agrupar corretamente (uma aula sob o módulo a que pertence) é
+   * responsabilidade do CHAMADOR (Task 3.2, que faz o fetch).
+   */
   lessonsByModule: Record<string, Lesson[]>
   /** Conjunto de ids de aulas com `concluida = true` para o usuário atual. */
   concludedLessonIds: ReadonlySet<string>
@@ -95,7 +107,12 @@ export function computeUnlockState(input: ComputeUnlockInput): UnlockStateMap {
   const { modules, lessonsByModule, concludedLessonIds, quizPassedByModule } = input
 
   // Ordena por `ordem` (não muta a entrada). O de menor ordem é sempre o 1º.
-  const ordered = [...modules].sort((a, b) => a.ordem - b.ordem)
+  // Desempate por `id` (localeCompare) como chave secundária: torna a ordenação
+  // DETERMINÍSTICA mesmo se dois módulos tiverem o mesmo `ordem` (bug de dado a
+  // montante) — sem isso o resultado dependeria da ordem de inserção do array.
+  const ordered = [...modules].sort(
+    (a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id),
+  )
 
   const result: UnlockStateMap = {}
   // O módulo corrente está liberado enquanto o anterior estiver `done`. Começa
