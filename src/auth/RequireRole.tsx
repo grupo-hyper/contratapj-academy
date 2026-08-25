@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import type { Role } from './authContext'
+import { isAdminEmail } from './admins'
 
 /**
  * Guarda de rota por autenticação e papel.
@@ -39,7 +40,9 @@ export function RequireRole({
     return <LoadingScreen />
   }
 
-  if (allow && !allow.includes(profile.role)) {
+  // Admins (allowlist) navegam por TODAS as visões: ignoram o gate de papel.
+  // É só UI — os dados reais seguem protegidos por RLS no Supabase.
+  if (allow && !allow.includes(profile.role) && !isAdminEmail(user.email)) {
     return <Navigate to="/" replace />
   }
 

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import type { AuthContextValue } from './authContext'
+import { ADMIN_EMAILS } from './admins'
 
 // Mocka o useAuth diretamente pra dirigir o estado sem AuthProvider/Supabase.
 const useAuthMock = vi.hoisted(() => vi.fn())
@@ -52,6 +53,40 @@ describe('RequireRole', () => {
     )
 
     expect(screen.getByText(/carregando/i)).toBeInTheDocument()
+    expect(screen.queryByText(/conteúdo protegido/i)).not.toBeInTheDocument()
+  })
+
+  it('admin (allowlist) acessa rota gated mesmo sem o papel exigido', () => {
+    setAuth({
+      loading: false,
+      user: { id: 'u1', email: ADMIN_EMAILS[0] } as never,
+      profile: { id: 'u1', nome: 'Diego', role: 'aluno', avatar_url: null },
+    })
+    render(
+      <MemoryRouter>
+        <RequireRole allow={['gestor']}>
+          <div>conteúdo protegido</div>
+        </RequireRole>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/conteúdo protegido/i)).toBeInTheDocument()
+  })
+
+  it('não-admin sem o papel exigido é bloqueado', () => {
+    setAuth({
+      loading: false,
+      user: { id: 'u2', email: 'aluno.comum@contratapj.com.br' } as never,
+      profile: { id: 'u2', nome: 'Ana', role: 'aluno', avatar_url: null },
+    })
+    render(
+      <MemoryRouter>
+        <RequireRole allow={['gestor']}>
+          <div>conteúdo protegido</div>
+        </RequireRole>
+      </MemoryRouter>,
+    )
+
     expect(screen.queryByText(/conteúdo protegido/i)).not.toBeInTheDocument()
   })
 })

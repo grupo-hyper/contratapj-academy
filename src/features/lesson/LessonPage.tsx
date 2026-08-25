@@ -2,7 +2,8 @@
  * LessonPage — player da aula (Task 3.3), estilo streaming dark.
  *
  * Composição pura: a busca/derivação vive em `useLesson`; aqui montamos a tela
- * (TopNav + voltar, título, vídeo, texto) e o botão "Marcar como concluída".
+ * (link Voltar, título, vídeo, texto) e o botão "Marcar como concluída". A
+ * navegação global (sidebar) vem do <AppLayout>.
  *
  * Conclusão: mecanismo confiável = botão MANUAL. Ao clicar, `markConcluded`
  * grava o progresso (upsert 100%) e invalida a query de progresso da Home, então
@@ -11,7 +12,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { ProgressBar } from '../../components/ProgressBar'
-import { TopNav } from '../../components/TopNav'
 import { LessonText } from './LessonText'
 import { LessonVideo } from './LessonVideo'
 import { useLesson } from './useLesson'
@@ -31,13 +31,11 @@ function LessonSkeleton() {
 
 export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>()
-  const { profile, user, loading, signOut } = useAuth()
+  const { profile, user, loading } = useAuth()
 
   // Mesma resolução de id usada na Home, para a invalidação da query de
   // progresso casar EXATAMENTE com a chave `['lesson_progress', profileId]`.
   const profileId = profile?.id ?? user?.id
-  const userName = profile?.nome ?? user?.email ?? 'Aluno'
-  const role = profile?.role
 
   const {
     lesson,
@@ -53,14 +51,14 @@ export function LessonPage() {
 
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
-      <TopNav userName={userName} role={role} onSignOut={signOut}>
+      <div className="mx-auto max-w-4xl px-4 pt-6">
         <Link
           to="/"
-          className="text-cpj-white/70 transition hover:text-cpj-white"
+          className="text-sm text-cpj-white/70 transition hover:text-cpj-white"
         >
           ← Voltar
         </Link>
-      </TopNav>
+      </div>
 
       {showLoading ? (
         <LessonSkeleton />

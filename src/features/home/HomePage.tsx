@@ -2,11 +2,11 @@
  * HomePage — dashboard do aluno (Task 3.2), estilo streaming dark.
  *
  * Composição pura: toda a busca/derivação vive em `useHomeData`; aqui só
- * montamos os componentes presentational (TopNav, Hero, Row, Tile) a partir do
- * estado já pronto. Reflete o PROGRESSO REAL do usuário logado.
+ * montamos os componentes presentational (Hero, Row, Tile) a partir do estado
+ * já pronto. Reflete o PROGRESSO REAL do usuário logado. A navegação global
+ * (sidebar) vem do <AppLayout>, não desta página.
  *
  * Estrutura:
- *  - TopNav com nome/papel do perfil e ação de sair.
  *  - Hero "Continue de onde parou": aula corrente = primeira aula publicada
  *    não-concluída do módulo `current` (da trilha travada). Se tudo estiver
  *    concluído, mostra variante de conclusão da trilha.
@@ -22,7 +22,6 @@ import { useAuth } from '../../auth/useAuth'
 import { Hero } from '../../components/Hero'
 import { Row } from '../../components/Row'
 import { Tile, type TileState } from '../../components/Tile'
-import { TopNav } from '../../components/TopNav'
 import type { Lesson, Module } from '../../types/content'
 import { useHomeData, type HomeData } from './useHomeData'
 
@@ -90,14 +89,11 @@ function HomeSkeleton() {
 }
 
 export function HomePage() {
-  const { profile, user, loading, signOut } = useAuth()
+  const { profile, user, loading } = useAuth()
   const navigate = useNavigate()
 
   const profileId = profile?.id ?? user?.id
   const { data, isLoading, isError } = useHomeData(profileId)
-
-  const userName = profile?.nome ?? user?.email ?? 'Aluno'
-  const role = profile?.role
 
   // Deriva os alvos do Hero a partir do estado da trilha.
   const heroModel = useMemo(() => {
@@ -135,10 +131,6 @@ export function HomePage() {
 
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
-      <TopNav userName={userName} role={role} onSignOut={signOut}>
-        <span className="font-medium text-cpj-white">Início</span>
-      </TopNav>
-
       {showLoading ? (
         <HomeSkeleton />
       ) : isError || !data ? (

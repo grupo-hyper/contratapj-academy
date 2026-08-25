@@ -2,7 +2,7 @@
  * QuizPage — motor do teste do módulo (Task 4.2), estilo streaming dark.
  *
  * Composição pura: a busca/derivação vive em `useQuiz`; aqui montamos a tela
- * (TopNav + voltar, questões como radio groups acessíveis, envio) e os estados:
+ * (link Voltar, questões como radio groups acessíveis, envio) e os estados:
  * carregando, já aprovado, tentativas esgotadas (cap), cooldown (contagem/instante
  * em BRT), módulo sem questões, e o resultado pós-envio.
  *
@@ -13,7 +13,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
-import { TopNav } from '../../components/TopNav'
 import type { QuizAnswers } from '../../types/content'
 import { useQuizData, useSubmitQuiz } from './useQuiz'
 
@@ -68,13 +67,11 @@ function Panel({
 
 export function QuizPage() {
   const { moduleId } = useParams<{ moduleId: string }>()
-  const { profile, user, loading, signOut } = useAuth()
+  const { profile, user, loading } = useAuth()
 
   // Mesma resolução de id da LessonPage/Home, para a invalidação casar com
   // ['quiz_attempts', profileId].
   const profileId = profile?.id ?? user?.id
-  const userName = profile?.nome ?? user?.email ?? 'Aluno'
-  const role = profile?.role
 
   const { questions, gate, isLoading, isError } = useQuizData(moduleId, profileId)
   const { submit, isSubmitting, result, rejection } = useSubmitQuiz(
@@ -297,14 +294,14 @@ export function QuizPage() {
 
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
-      <TopNav userName={userName} role={role} onSignOut={signOut}>
+      <div className="mx-auto max-w-3xl px-4 pt-6">
         <Link
           to="/"
-          className="text-cpj-white/70 transition hover:text-cpj-white"
+          className="text-sm text-cpj-white/70 transition hover:text-cpj-white"
         >
           ← Voltar
         </Link>
-      </TopNav>
+      </div>
 
       {showLoading ? <QuizSkeleton /> : renderBody()}
     </main>

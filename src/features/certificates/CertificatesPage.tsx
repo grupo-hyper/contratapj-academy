@@ -2,7 +2,7 @@
  * CertificatesPage — tela "Meus certificados" (Task 4.4), estilo streaming dark.
  *
  * Composição pura: a busca/derivação vive em `useCertificates`; a geração do PDF
- * vive em `pdf.ts`. Aqui montamos a tela (TopNav + voltar, cert final destacado,
+ * vive em `pdf.ts`. Aqui montamos a tela (link Voltar, cert final destacado,
  * certs de módulo em ordem) e os estados: carregando, vazio, erro e a lista.
  *
  * Download: cada linha tem um botão "Baixar PDF" que monta o certificado
@@ -13,7 +13,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
-import { TopNav } from '../../components/TopNav'
 import type { Certificate } from '../../types/content'
 import { buildCertificatePdf, downloadPdf, formatBRDate } from './pdf'
 import { useCertificates } from './useCertificates'
@@ -98,11 +97,10 @@ function CertificateRow({
 }
 
 export function CertificatesPage() {
-  const { profile, user, loading, signOut } = useAuth()
+  const { profile, user, loading } = useAuth()
 
   const profileId = profile?.id ?? user?.id
   const studentName = profile?.nome ?? user?.email ?? 'Aluno'
-  const role = profile?.role
 
   const {
     certificates,
@@ -194,14 +192,14 @@ export function CertificatesPage() {
 
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
-      <TopNav userName={studentName} role={role} onSignOut={signOut}>
+      <div className="mx-auto max-w-3xl px-4 pt-6">
         <Link
           to="/"
-          className="text-cpj-white/70 transition hover:text-cpj-white"
+          className="text-sm text-cpj-white/70 transition hover:text-cpj-white"
         >
           ← Voltar
         </Link>
-      </TopNav>
+      </div>
 
       {showLoading ? <CertificatesSkeleton /> : renderBody()}
     </main>

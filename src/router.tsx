@@ -6,6 +6,7 @@ import {
 } from 'react-router-dom'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
+import { AppLayout } from './components/AppLayout'
 import { AutorStub, GestorStub } from './features/_stubs'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
@@ -36,57 +37,48 @@ const routeFallback = (
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   {
-    path: '/',
+    // Área autenticada: o <AppLayout> (sidebar + Outlet) é o shell comum. Um
+    // único RequireRole protege todas as filhas (qualquer papel logado).
     element: (
       <RequireRole>
-        <HomePage />
+        <AppLayout />
       </RequireRole>
     ),
-  },
-  {
-    // Player da aula. Qualquer papel autenticado (como a Home): sem `allow`.
-    path: '/aula/:lessonId',
-    element: (
-      <RequireRole>
-        <LessonPage />
-      </RequireRole>
-    ),
-  },
-  {
-    // Motor do teste do módulo. Qualquer papel autenticado (como a Home/aula).
-    path: '/quiz/:moduleId',
-    element: (
-      <RequireRole>
-        <QuizPage />
-      </RequireRole>
-    ),
-  },
-  {
-    // Tela "Meus certificados". Qualquer papel autenticado (como a Home).
-    path: '/certificados',
-    element: (
-      <RequireRole>
-        <Suspense fallback={routeFallback}>
-          <CertificatesPage />
-        </Suspense>
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/gestor',
-    element: (
-      <RequireRole allow={['gestor']}>
-        <GestorStub />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/autor',
-    element: (
-      <RequireRole allow={['autor']}>
-        <AutorStub />
-      </RequireRole>
-    ),
+    children: [
+      { path: '/', element: <HomePage /> },
+      // Player da aula. Qualquer papel autenticado (como a Home).
+      { path: '/aula/:lessonId', element: <LessonPage /> },
+      // Motor do teste do módulo. Qualquer papel autenticado.
+      { path: '/quiz/:moduleId', element: <QuizPage /> },
+      {
+        // Tela "Meus certificados". Qualquer papel autenticado.
+        path: '/certificados',
+        element: (
+          <Suspense fallback={routeFallback}>
+            <CertificatesPage />
+          </Suspense>
+        ),
+      },
+      {
+        // Painel do gestor. Dentro do AppLayout (com sidebar); o RequireRole
+        // interno restringe a gestor — admins (allowlist) passam pelo bypass.
+        path: '/gestor',
+        element: (
+          <RequireRole allow={['gestor']}>
+            <GestorStub />
+          </RequireRole>
+        ),
+      },
+      {
+        // CMS do autor. Idem: dentro do layout, restrito a autor (+ admins).
+        path: '/autor',
+        element: (
+          <RequireRole allow={['autor']}>
+            <AutorStub />
+          </RequireRole>
+        ),
+      },
+    ],
   },
   // Catch-all: rota desconhecida volta pra home.
   { path: '*', element: <Navigate to="/" replace /> },
