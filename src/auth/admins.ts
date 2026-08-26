@@ -10,7 +10,10 @@
  * próprio login sem virar `gestor`/`autor` no banco (o que mudaria a experiência
  * dele como aluno). Para promover alguém a admin, some o e-mail à lista.
  */
-export const ADMIN_EMAILS: readonly string[] = ['diegodomingos@hypergroup.com.br']
+export const ADMIN_EMAILS: readonly string[] = [
+  'diegodomingos@hypergroup.com.br',
+  'camilasouza@hypergroup.com.br',
+]
 
 /** true quando o e-mail (case-insensitive) está na allowlist de admins. */
 export function isAdminEmail(email: string | null | undefined): boolean {
