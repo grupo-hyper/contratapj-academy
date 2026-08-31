@@ -79,10 +79,12 @@ describe('LessonPage — player da aula', () => {
     expect(
       screen.getByRole('heading', { name: /Como prospectar clientes/i, level: 1 }),
     ).toBeInTheDocument()
-    // Texto do markdown renderizado (heading do texto_md).
+    // O h1 do markdown ("# Bem-vindo") é removido para não duplicar o título da
+    // página; o CORPO do markdown continua renderizado.
     expect(
-      screen.getByRole('heading', { name: /Bem-vindo/i }),
-    ).toBeInTheDocument()
+      screen.queryByRole('heading', { name: /Bem-vindo/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('conteúdo')).toBeInTheDocument()
     // Sem youtube_id => placeholder "vídeo em breve".
     expect(screen.getByLabelText(/vídeo em breve/i)).toBeInTheDocument()
   })

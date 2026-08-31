@@ -15,6 +15,7 @@ import { ProgressBar } from '../../components/ProgressBar'
 import { LessonText } from './LessonText'
 import { LessonVideo } from './LessonVideo'
 import { useLesson } from './useLesson'
+import { firstMarkdownLine, parseLessonTitle, stripLeadingH1 } from './lessonTitle'
 
 /** Esqueleto dark simples enquanto carrega. */
 function LessonSkeleton() {
@@ -79,13 +80,28 @@ export function LessonPage() {
         </div>
       ) : (
         <article className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6">
-          <h1 className="text-2xl font-bold text-cpj-white sm:text-3xl">
-            {lesson.titulo}
-          </h1>
+          {(() => {
+            // O código do módulo (PB-MM) vive só no h1 do markdown; o cabeçalho
+            // vira kicker + título (identidade das propostas) e o corpo perde
+            // esse h1 para não duplicar.
+            const heading = parseLessonTitle(firstMarkdownLine(lesson.texto_md))
+            return (
+              <header className="flex flex-col gap-2">
+                {heading?.kicker && (
+                  <p className="flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.16em] text-cpj-royal before:h-px before:w-6 before:bg-cpj-royal/70 before:content-['']">
+                    {heading.kicker}
+                  </p>
+                )}
+                <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-cpj-white sm:text-4xl">
+                  {heading?.titulo ?? lesson.titulo}
+                </h1>
+              </header>
+            )
+          })()}
 
           <LessonVideo youtubeId={lesson.youtube_id} title={lesson.titulo} />
 
-          <LessonText markdown={lesson.texto_md} />
+          <LessonText markdown={stripLeadingH1(lesson.texto_md)} />
 
           {/* Bloco de conclusão manual (mecanismo confiável de progresso). */}
           <div className="mt-2 flex flex-col gap-3 border-t border-cpj-white/10 pt-6">
