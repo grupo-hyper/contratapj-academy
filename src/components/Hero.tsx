@@ -30,7 +30,7 @@ export function Hero({
           <img
             src={backgroundUrl}
             alt=""
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-[left_bottom]"
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-cpj-navy via-cpj-bg to-cpj-bg" />
