@@ -28,8 +28,9 @@ function renderSidebar(
 describe('AppSidebar', () => {
   it('renderiza o wordmark e os links base', () => {
     renderSidebar()
-    expect(screen.getByText('ContrataPJ')).toBeInTheDocument()
-    expect(screen.getByText('Academy')).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', { name: /ContrataPJ Academy/i }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /início/i })).toHaveAttribute(
       'href',
       '/',

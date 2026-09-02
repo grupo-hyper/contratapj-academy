@@ -59,7 +59,7 @@ const LockIcon = () => (
 )
 
 const stateRing: Record<TileState, string> = {
-  done: 'ring-1 ring-cpj-royal/60',
+  done: 'ring-1 ring-cpj-white/25',
   current: 'ring-2 ring-cpj-coral',
   locked: 'ring-1 ring-cpj-white/10',
 }
@@ -86,7 +86,7 @@ export function Tile({
         stateRing[state],
         locked
           ? 'cursor-not-allowed opacity-50'
-          : 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_34px_-8px_rgb(66_89_223_/_0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal',
+          : 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_34px_-8px_rgb(0_0_0_/_0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-white/40',
       ].join(' ')}
     >
       {/* Capa */}
@@ -112,7 +112,7 @@ export function Tile({
         {state === 'done' && (
           <span
             aria-label="Concluído"
-            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-cpj-royal text-cpj-white"
+            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-cpj-white/20 bg-black/60 text-cpj-white"
           >
             <CheckIcon />
           </span>

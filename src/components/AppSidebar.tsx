@@ -54,6 +54,15 @@ function HomeIcon() {
   )
 }
 
+function TargetIcon() {
+  return (
+    <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
 function CertIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -99,6 +108,7 @@ function PenIcon() {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Início', icon: <HomeIcon />, end: true },
+  { to: '/metas', label: 'Metas', icon: <TargetIcon /> },
   { to: '/certificados', label: 'Certificados', icon: <CertIcon /> },
   { to: '/gestor', label: 'Gestão', icon: <GearIcon />, roles: ['gestor'] },
   { to: '/autor', label: 'Conteúdo', icon: <PenIcon />, roles: ['autor'] },
@@ -117,11 +127,14 @@ export function AppSidebar({
   )
 
   return (
-    <aside className="ocean-glass flex h-dvh w-64 shrink-0 flex-col border-r border-cpj-royal/15">
-      {/* Wordmark */}
-      <div className="flex h-16 items-center gap-2 px-5 font-bold tracking-tight">
-        <span className="text-cpj-coral">ContrataPJ</span>
-        <span className="text-cpj-white/90">Academy</span>
+    <aside className="ocean-glass flex h-dvh w-64 shrink-0 flex-col border-r border-cpj-white/10">
+      {/* Logo (marca oficial, versão branca para fundo escuro) */}
+      <div className="flex h-16 items-center px-5">
+        <img
+          src="/logo-contratapj.png"
+          alt="ContrataPJ Academy"
+          className="h-7 w-auto"
+        />
       </div>
 
       {/* Navegação */}

@@ -8,6 +8,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
 import { AutorStub, GestorStub } from './features/_stubs'
+import { GoalsPage } from './features/goals/GoalsPage'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
 import { QuizPage } from './features/quiz/QuizPage'
@@ -46,6 +47,8 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { path: '/', element: <HomePage /> },
+      // Painel de ritmo/metas do aluno. Qualquer papel autenticado.
+      { path: '/metas', element: <GoalsPage /> },
       // Player da aula. Qualquer papel autenticado (como a Home).
       { path: '/aula/:lessonId', element: <LessonPage /> },
       // Motor do teste do módulo. Qualquer papel autenticado.

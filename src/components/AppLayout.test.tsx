@@ -32,7 +32,9 @@ describe('AppLayout', () => {
     renderLayout()
     expect(screen.getByText('Conteúdo da Home')).toBeInTheDocument()
     // Wordmark da sidebar presente (pelo menos o painel do desktop).
-    expect(screen.getAllByText('ContrataPJ').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('img', { name: /ContrataPJ Academy/i }).length,
+    ).toBeGreaterThan(0)
   })
 
   it('abre o drawer no mobile ao clicar no hambúrguer', () => {
