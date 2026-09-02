@@ -16,7 +16,7 @@ import { LessonMarkdown } from './lessonMarkdown'
 import { splitIntoSlides } from './lessonSlides'
 
 /** Segundos de bloqueio do "Próximo" a cada slide. */
-export const SLIDE_UNLOCK_SECONDS = 10
+export const SLIDE_UNLOCK_SECONDS = 5
 
 interface LessonSlidesProps {
   markdown: string | null

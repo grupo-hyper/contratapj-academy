@@ -25,7 +25,7 @@ describe('LessonSlides', () => {
 
   it('libera "Próximo" após 10s e avança de slide', () => {
     render(<LessonSlides markdown={MD} />)
-    act(() => vi.advanceTimersByTime(10_000))
+    act(() => vi.advanceTimersByTime(5_000))
 
     const next = screen.getByRole('button', { name: 'Próximo →' })
     expect(next).toBeEnabled()
@@ -41,7 +41,7 @@ describe('LessonSlides', () => {
   it('"Anterior" é imediato (sem esperar os 10s)', () => {
     render(<LessonSlides markdown={MD} />)
     // Avança para o slide 2.
-    act(() => vi.advanceTimersByTime(10_000))
+    act(() => vi.advanceTimersByTime(5_000))
     fireEvent.click(screen.getByRole('button', { name: 'Próximo →' }))
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
 
