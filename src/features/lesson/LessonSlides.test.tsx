@@ -71,4 +71,15 @@ describe('LessonSlides', () => {
       screen.getByText(/ainda não tem material em texto/i),
     ).toBeInTheDocument()
   })
+
+  it('gated=false libera "Próximo" imediatamente (preview do autor)', () => {
+    render(<LessonSlides markdown={MD} gated={false} />)
+    // Sem avançar o relógio: o botão já deve estar habilitado e sem contagem.
+    const next = screen.getByRole('button', { name: 'Próximo →' })
+    expect(next).toBeEnabled()
+    fireEvent.click(next)
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+    // No slide seguinte continua livre (sem re-armar o gate).
+    expect(screen.getByRole('button', { name: 'Próximo →' })).toBeEnabled()
+  })
 })

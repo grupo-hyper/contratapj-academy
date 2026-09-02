@@ -20,9 +20,14 @@ export const SLIDE_UNLOCK_SECONDS = 5
 
 interface LessonSlidesProps {
   markdown: string | null
+  /**
+   * Quando false, o "Próximo" nunca é bloqueado por tempo (navegação livre).
+   * Usado no PREVIEW do editor do autor. Default true (comportamento do player).
+   */
+  gated?: boolean
 }
 
-export function LessonSlides({ markdown }: LessonSlidesProps) {
+export function LessonSlides({ markdown, gated = true }: LessonSlidesProps) {
   const slides = useMemo(() => splitIntoSlides(markdown), [markdown])
   const [index, setIndex] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(SLIDE_UNLOCK_SECONDS)
@@ -30,10 +35,10 @@ export function LessonSlides({ markdown }: LessonSlidesProps) {
   const total = slides.length
   const isLast = index >= total - 1
 
-  // Re-arma o gate de 10s toda vez que o slide muda. No último slide não há
-  // "Próximo", então não precisa de contagem.
+  // Re-arma o gate a cada slide. No último slide, ou quando o gate está
+  // desligado (preview do autor), não há contagem: libera na hora.
   useEffect(() => {
-    if (isLast) {
+    if (isLast || !gated) {
       setSecondsLeft(0)
       return
     }
@@ -48,7 +53,7 @@ export function LessonSlides({ markdown }: LessonSlidesProps) {
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [index, isLast])
+  }, [index, isLast, gated])
 
   if (total === 0) {
     return (
