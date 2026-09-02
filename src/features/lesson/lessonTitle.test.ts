@@ -3,6 +3,7 @@ import {
   parseLessonTitle,
   firstMarkdownLine,
   stripLeadingH1,
+  stripSourcesSection,
 } from './lessonTitle'
 
 describe('parseLessonTitle', () => {
@@ -47,5 +48,32 @@ describe('stripLeadingH1', () => {
   })
   it('preserva o markdown quando não começa com h1', () => {
     expect(stripLeadingH1('> nota\n\n## Seção')).toBe('> nota\n\n## Seção')
+  })
+})
+
+describe('stripSourcesSection', () => {
+  it('remove a seção "## N. Fontes" (e o --- anterior) até o fim', () => {
+    const md = [
+      '## 1. Objetivo',
+      'texto',
+      '',
+      '---',
+      '',
+      '## 11. Fontes',
+      '**KB:** seção 4',
+      '- vídeo https://youtu.be/x',
+    ].join('\n')
+    expect(stripSourcesSection(md)).toBe('## 1. Objetivo\ntexto')
+  })
+
+  it('não remove "## 3. Falas de referência" (conteúdo, não fonte)', () => {
+    const md = '## 3. Falas de referência (do aprendizado)\n- fala'
+    expect(stripSourcesSection(md)).toBe(md)
+  })
+
+  it('devolve intacto quando não há seção de fontes', () => {
+    expect(stripSourcesSection('## 1. Objetivo\ntexto')).toBe(
+      '## 1. Objetivo\ntexto',
+    )
   })
 })

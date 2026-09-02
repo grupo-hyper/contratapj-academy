@@ -12,10 +12,15 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { ProgressBar } from '../../components/ProgressBar'
-import { LessonText } from './LessonText'
+import { LessonSlides } from './LessonSlides'
 import { LessonVideo } from './LessonVideo'
 import { useLesson } from './useLesson'
-import { firstMarkdownLine, parseLessonTitle, stripLeadingH1 } from './lessonTitle'
+import {
+  firstMarkdownLine,
+  parseLessonTitle,
+  stripLeadingH1,
+  stripSourcesSection,
+} from './lessonTitle'
 
 /** Esqueleto dark simples enquanto carrega. */
 function LessonSkeleton() {
@@ -101,7 +106,9 @@ export function LessonPage() {
 
           <LessonVideo youtubeId={lesson.youtube_id} title={lesson.titulo} />
 
-          <LessonText markdown={stripLeadingH1(lesson.texto_md)} />
+          <LessonSlides
+            markdown={stripSourcesSection(stripLeadingH1(lesson.texto_md))}
+          />
 
           {/* Bloco de conclusão manual (mecanismo confiável de progresso). */}
           <div className="mt-2 flex flex-col gap-3 border-t border-cpj-white/10 pt-6">

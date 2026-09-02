@@ -78,3 +78,29 @@ export function stripLeadingH1(md: string | null | undefined): string {
   }
   return lines.join('\n').trim()
 }
+
+// Heading da seção de fontes/referências: "## N. Fontes" ou "## Referências".
+// Exige que o TÍTULO comece com Fontes/Fonte/Referências (após o número) — assim
+// não casa "## 3. Falas de referência" (conteúdo legítimo do módulo Scripts).
+const SOURCES_HEADING = /^#{1,6}\s*(?:\d+\.\s*)?(?:Fontes?|Refer[êe]ncias)\b/i
+
+/**
+ * Remove a seção final de FONTES/REFERÊNCIAS das aulas (links de vídeo + KB que
+ * o NotebookLM anexa). Corta do último heading de fontes até o fim, incluindo um
+ * separador `---` imediatamente anterior. Se não houver, devolve o texto intacto.
+ */
+export function stripSourcesSection(md: string | null | undefined): string {
+  if (!md) return ''
+  const lines = md.split('\n')
+  let cut = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (SOURCES_HEADING.test(lines[i])) cut = i
+  }
+  if (cut === -1) return md.trim()
+  // Recua sobre linhas em branco e um separador `---` antes do heading.
+  let start = cut
+  let j = cut - 1
+  while (j >= 0 && lines[j].trim() === '') j--
+  if (j >= 0 && /^-{3,}\s*$/.test(lines[j].trim())) start = j
+  return lines.slice(0, start).join('\n').trim()
+}
