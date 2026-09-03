@@ -19,12 +19,3 @@ export function GestorStub() {
     </main>
   )
 }
-
-// TODO Fase 5/6: substituir stub pelo CMS real do autor.
-export function AutorStub() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-cpj-bg text-cpj-white">
-      <h1 className="text-2xl font-bold">CMS do autor</h1>
-    </main>
-  )
-}

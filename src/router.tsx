@@ -7,7 +7,8 @@ import {
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
-import { AutorStub, GestorStub } from './features/_stubs'
+import { GestorStub } from './features/_stubs'
+import { AuthorPage } from './features/authoring/AuthorPage'
 import { GoalsPage } from './features/goals/GoalsPage'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
@@ -73,11 +74,12 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        // CMS do autor. Idem: dentro do layout, restrito a autor (+ admins).
+        // CMS do autor (F1: editor de aula). Dentro do layout, restrito a autor
+        // (+ admins via bypass do RequireRole).
         path: '/autor',
         element: (
           <RequireRole allow={['autor']}>
-            <AutorStub />
+            <AuthorPage />
           </RequireRole>
         ),
       },
