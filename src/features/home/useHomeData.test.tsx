@@ -15,6 +15,9 @@ import type { ReactNode } from 'react'
 
 // Fixtures de tabela, sobrescritos por teste.
 let TABLES: Record<string, unknown[]> = {}
+// Chains criadas por tabela na chamada mais recente — permite inspecionar
+// `.eq.mock.calls` por tabela (ex.: confirmar o filtro `area_id` em `modules`).
+let CHAINS: Record<string, ReturnType<typeof makeTableChain>> = {}
 
 // Um "thenable" encadeável por tabela: select()/eq()/order()/in() devolvem o
 // mesmo objeto; a resolução (await) entrega { data, error } com as linhas da
@@ -33,7 +36,11 @@ function makeTableChain(rows: unknown[]) {
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
-    from: vi.fn((table: string) => makeTableChain(TABLES[table] ?? [])),
+    from: vi.fn((table: string) => {
+      const chain = makeTableChain(TABLES[table] ?? [])
+      CHAINS[table] = chain
+      return chain
+    }),
   },
 }))
 
@@ -54,6 +61,7 @@ function newClient() {
 afterEach(() => {
   vi.clearAllMocks()
   TABLES = {}
+  CHAINS = {}
 })
 
 describe('useHomeData — seam de quiz na trilha', () => {
@@ -108,5 +116,55 @@ describe('useHomeData — seam de quiz na trilha', () => {
       attemptsUsed: 1,
       passed: true,
     })
+  })
+})
+
+/** Extrai `.eq.mock.calls` de uma chain de tabela com tipagem segura (sem `any`). */
+function eqCallsOf(chain: ReturnType<typeof makeTableChain> | undefined) {
+  const eq = chain?.eq as { mock: { calls: unknown[][] } } | undefined
+  return eq?.mock.calls ?? []
+}
+
+describe('useHomeData — escopo por área (Task 5)', () => {
+  function seedBase() {
+    TABLES = {
+      modules: [
+        { id: 'm1', ordem: 1, titulo: 'M1', descricao: null, capa_url: null, publicado: true, created_at: '', area_id: 'area-1' },
+      ],
+      lessons: [],
+      lesson_progress: [],
+      questions: [],
+      quiz_attempts: [],
+    }
+  }
+
+  it('com areaId => a query de modules aplica .eq("area_id", areaId) além de .eq("publicado", true)', async () => {
+    seedBase()
+    const { result } = renderHook(() => useHomeData('u1', 'area-1'), {
+      wrapper: makeWrapper(newClient()),
+    })
+
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    const modulesChain = CHAINS.modules
+    expect(modulesChain).toBeDefined()
+    const eqCalls = eqCallsOf(modulesChain)
+    expect(eqCalls).toContainEqual(['publicado', true])
+    expect(eqCalls).toContainEqual(['area_id', 'area-1'])
+  })
+
+  it('sem areaId (chamada antiga) => nenhum filtro area_id é aplicado (retrocompatível)', async () => {
+    seedBase()
+    const { result } = renderHook(() => useHomeData('u1'), {
+      wrapper: makeWrapper(newClient()),
+    })
+
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    const modulesChain = CHAINS.modules
+    expect(modulesChain).toBeDefined()
+    const eqCalls = eqCallsOf(modulesChain)
+    expect(eqCalls).toContainEqual(['publicado', true])
+    expect(eqCalls.some((call) => call[0] === 'area_id')).toBe(false)
   })
 })

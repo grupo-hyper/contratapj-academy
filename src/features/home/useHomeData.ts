@@ -27,12 +27,18 @@ import type {
 } from '../../types/content'
 import { computeUnlockState, type UnlockStateMap } from './useUnlock'
 
-async function fetchModules(): Promise<Module[]> {
-  const { data, error } = await supabase
-    .from('modules')
-    .select('*')
-    .eq('publicado', true)
-    .order('ordem', { ascending: true })
+/**
+ * `areaId` opcional escopa a trilha a uma área específica (Task 5 — Áreas
+ * Fase 1). Sem `areaId` mantém o comportamento pré-existente (todos os
+ * módulos publicados, de qualquer área) — usado durante a transição até as
+ * rotas passarem a sempre informar a área.
+ */
+async function fetchModules(areaId?: string): Promise<Module[]> {
+  let query = supabase.from('modules').select('*').eq('publicado', true)
+  if (areaId) {
+    query = query.eq('area_id', areaId)
+  }
+  const { data, error } = await query.order('ordem', { ascending: true })
   if (error) throw error
   return (data ?? []) as Module[]
 }
@@ -172,16 +178,23 @@ export interface UseHomeDataResult {
  * Hook público consumido pela HomePage. Recebe o `profileId` (== user.id) para
  * escopar o progresso; quando ausente (sessão ainda carregando) as queries
  * ficam desabilitadas e o hook reporta `isLoading`.
+ *
+ * `areaId` (Task 5, opcional) escopa a trilha de módulos a uma área — usado
+ * pela futura `AreaTrilhaPage`. Sem `areaId`, `fetchModules` busca todos os
+ * módulos publicados (comportamento atual da `HomePage`, preservado).
  */
-export function useHomeData(profileId: string | undefined): UseHomeDataResult {
+export function useHomeData(
+  profileId: string | undefined,
+  areaId?: string,
+): UseHomeDataResult {
   // `modules`/`lessons` não dependem do usuário, mas são gated no mesmo `enabled`
   // que `progress` de propósito: espera a auth resolver antes de buscar, evitando
   // um flash de conteúdo sem o progresso do aluno já disponível.
   const enabled = Boolean(profileId)
 
   const modulesQuery = useQuery({
-    queryKey: ['modules'],
-    queryFn: fetchModules,
+    queryKey: ['modules', areaId],
+    queryFn: () => fetchModules(areaId),
     enabled,
   })
   const lessonsQuery = useQuery({
