@@ -163,7 +163,7 @@ describe('router + RequireRole', () => {
     renderAt('/autor')
 
     expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
-    expect(screen.queryByText(/selecione um módulo ou uma aula/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/selecione um módulo/i)).not.toBeInTheDocument()
   })
 
   it('gestor em /autor é bloqueado (cai na home)', async () => {
@@ -171,7 +171,7 @@ describe('router + RequireRole', () => {
     renderAt('/autor')
 
     expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
-    expect(screen.queryByText(/selecione um módulo ou uma aula/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/selecione um módulo/i)).not.toBeInTheDocument()
   })
 
   it('gestor em /gestor é liberado', async () => {
@@ -185,7 +185,7 @@ describe('router + RequireRole', () => {
     signedInAs('autor')
     renderAt('/autor')
 
-    expect(await screen.findByText(/selecione um módulo ou uma aula/i)).toBeInTheDocument()
+    expect(await screen.findByText(/selecione um módulo/i)).toBeInTheDocument()
   })
 
   it('aluno em / é liberado (home)', async () => {

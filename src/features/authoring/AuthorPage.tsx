@@ -16,6 +16,7 @@ import { useCallback, useRef, useState } from 'react'
 import { AuthorTree } from './AuthorTree'
 import { LessonEditor } from './LessonEditor'
 import { ModuleEditor } from './ModuleEditor'
+import { QuizEditor } from './QuizEditor'
 import { useAuthorTree } from './useAuthorTree'
 import { useAuthorMutations } from './useAuthorMutations'
 import type { Lesson, Module } from '../../types/content'
@@ -29,11 +30,15 @@ function AuthorSkeleton() {
   )
 }
 
-/** Seleção corrente: nada, um módulo ou uma aula (mutuamente exclusivas). */
+/**
+ * Seleção corrente: nada, um módulo, uma aula ou o quiz de um módulo
+ * (mutuamente exclusivas). No caso 'quiz', `id` é o module_id.
+ */
 type Selection =
   | { kind: 'none' }
   | { kind: 'module'; id: string }
   | { kind: 'lesson'; id: string }
+  | { kind: 'quiz'; id: string }
 
 export function AuthorPage() {
   const { modules, lessonsByModule, isLoading, isError } = useAuthorTree()
@@ -81,12 +86,23 @@ export function AuthorPage() {
     setSelection({ kind: 'module', id: moduleId })
   }
 
+  const selectQuiz = (moduleId: string) => {
+    if (selection.kind === 'quiz' && selection.id === moduleId) return
+    if (!guardDiscard()) return
+    dirtyRef.current = false
+    setSelection({ kind: 'quiz', id: moduleId })
+  }
+
   const onDeleteModule = (module: Module) => {
     const ok = window.confirm(
       `Excluir o módulo "${module.titulo}"? As aulas e o quiz dele serão removidos.`,
     )
     if (!ok) return
-    if (selection.kind === 'module' && selection.id === module.id) {
+    // Excluir o módulo derruba tanto a seleção do módulo quanto a do seu quiz.
+    if (
+      (selection.kind === 'module' || selection.kind === 'quiz') &&
+      selection.id === module.id
+    ) {
       dirtyRef.current = false
       setSelection({ kind: 'none' })
     }
@@ -137,6 +153,10 @@ export function AuthorPage() {
     selection.kind === 'module'
       ? modules.find((m) => m.id === selection.id) ?? null
       : null
+  const selectedQuizModule =
+    selection.kind === 'quiz'
+      ? modules.find((m) => m.id === selection.id) ?? null
+      : null
 
   if (isLoading) {
     return (
@@ -177,6 +197,8 @@ export function AuthorPage() {
               onDeleteLesson={onDeleteLesson}
               onReorderModule={onReorderModule}
               onReorderLesson={onReorderLesson}
+              onSelectQuiz={selectQuiz}
+              selectedQuizModuleId={selection.kind === 'quiz' ? selection.id : null}
             />
           )}
         </aside>
@@ -198,9 +220,15 @@ export function AuthorPage() {
               lesson={selectedLesson}
               onDirtyChange={onDirtyChange}
             />
+          ) : selectedQuizModule ? (
+            <QuizEditor
+              key={selectedQuizModule.id}
+              moduleId={selectedQuizModule.id}
+              moduleTitle={selectedQuizModule.titulo}
+            />
           ) : (
             <div className="flex h-full min-h-[16rem] items-center justify-center text-center text-cpj-white/50">
-              Selecione um módulo ou uma aula na árvore para editar.
+              Selecione um módulo, uma aula ou o quiz na árvore para editar.
             </div>
           )}
         </section>

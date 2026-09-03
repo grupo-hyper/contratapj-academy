@@ -106,6 +106,29 @@ describe('AuthorTree', () => {
     expect(onDeleteLesson).toHaveBeenCalledWith(lessonsByModule.m1[0])
   })
 
+  it('mostra "Quiz do módulo" por módulo, chama onSelectQuiz e destaca o selecionado', () => {
+    const onSelectQuiz = vi.fn()
+    render(
+      <AuthorTree
+        modules={modules}
+        lessonsByModule={lessonsByModule}
+        selectedLessonId={null}
+        onSelectLesson={vi.fn()}
+        onSelectQuiz={onSelectQuiz}
+        selectedQuizModuleId="m2"
+      />,
+    )
+    const quizButtons = screen.getAllByRole('button', {
+      name: /Quiz do módulo/,
+    })
+    expect(quizButtons).toHaveLength(2)
+    // O 1º pertence ao módulo m1.
+    fireEvent.click(quizButtons[0])
+    expect(onSelectQuiz).toHaveBeenCalledWith('m1')
+    // O quiz do m2 está destacado (aria-current).
+    expect(quizButtons[1]).toHaveAttribute('aria-current', 'true')
+  })
+
   it('setas ↑↓ reordenam e ficam desabilitadas nas pontas', () => {
     const onReorderModule = vi.fn()
     const onReorderLesson = vi.fn()

@@ -55,6 +55,12 @@ vi.mock('./ModuleEditor', () => ({
     </div>
   ),
 }))
+// QuizEditor stub: mostra o moduleId do quiz aberto (o real usaria supabase).
+vi.mock('./QuizEditor', () => ({
+  QuizEditor: ({ moduleId }: { moduleId: string }) => (
+    <span data-testid="editing-quiz">{moduleId}</span>
+  ),
+}))
 
 import { AuthorPage } from './AuthorPage'
 
@@ -66,7 +72,7 @@ afterEach(() => {
 describe('AuthorPage', () => {
   it('sem seleção mostra o placeholder', () => {
     render(<AuthorPage />)
-    expect(screen.getByText(/selecione um módulo ou uma aula/i)).toBeInTheDocument()
+    expect(screen.getByText(/selecione um módulo/i)).toBeInTheDocument()
   })
 
   it('selecionar uma aula abre o LessonEditor dela', () => {
@@ -79,6 +85,13 @@ describe('AuthorPage', () => {
     render(<AuthorPage />)
     fireEvent.click(screen.getByRole('button', { name: /^\d+\.Mod 1$/ }))
     expect(screen.getByTestId('editing-module')).toHaveTextContent('m1')
+  })
+
+  it('selecionar o quiz de um módulo abre o QuizEditor dele', () => {
+    render(<AuthorPage />)
+    // O 1º "Quiz do módulo" pertence ao m1.
+    fireEvent.click(screen.getAllByRole('button', { name: /Quiz do módulo/ })[0])
+    expect(screen.getByTestId('editing-quiz')).toHaveTextContent('m1')
   })
 
   it('trocar de aula com alterações pendentes pede confirmação e respeita o cancelar', () => {

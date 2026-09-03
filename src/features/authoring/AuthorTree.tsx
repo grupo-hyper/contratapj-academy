@@ -28,6 +28,10 @@ interface AuthorTreeProps {
   onReorderModule?: (module: Module, dir: -1 | 1) => void
   /** Troca a aula com a vizinha dentro do módulo. */
   onReorderLesson?: (lesson: Lesson, dir: -1 | 1) => void
+  /** Seleciona o quiz do módulo (abre o QuizEditor). */
+  onSelectQuiz?: (moduleId: string) => void
+  /** Módulo cujo quiz está selecionado (para destacar o item). */
+  selectedQuizModuleId?: string | null
 }
 
 function DraftBadge() {
@@ -91,6 +95,8 @@ export function AuthorTree({
   onDeleteLesson,
   onReorderModule,
   onReorderLesson,
+  onSelectQuiz,
+  selectedQuizModuleId = null,
 }: AuthorTreeProps) {
   return (
     <nav aria-label="Módulos e aulas" className="flex flex-col gap-4">
@@ -192,6 +198,25 @@ export function AuthorTree({
                 className="ml-4 mt-1 rounded-lg px-3 py-1 text-left text-xs font-semibold text-cpj-white/60 transition hover:bg-cpj-white/5 hover:text-cpj-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal"
               >
                 + nova aula
+              </button>
+            )}
+            {onSelectQuiz && (
+              <button
+                type="button"
+                onClick={() => onSelectQuiz(module.id)}
+                aria-current={
+                  module.id === selectedQuizModuleId ? 'true' : undefined
+                }
+                className={`ml-4 mt-1 flex items-center rounded-lg px-3 py-1 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal ${
+                  module.id === selectedQuizModuleId
+                    ? 'bg-cpj-royal/25 text-cpj-white'
+                    : 'text-cpj-white/60 hover:bg-cpj-white/5 hover:text-cpj-white'
+                }`}
+              >
+                <span aria-hidden="true" className="mr-1">
+                  ?
+                </span>
+                Quiz do módulo
               </button>
             )}
           </div>
