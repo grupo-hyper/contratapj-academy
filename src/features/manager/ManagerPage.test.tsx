@@ -22,6 +22,22 @@ vi.mock('./useManagerClasses', () => ({
   useManagerClasses: (...args: unknown[]) => useManagerClassesMock(...args),
 }))
 
+// O detalhe da turma renderiza <ClassRoster>, que usa useClassRoster. Mockamos
+// para um roster estável (sem rede) — o comportamento do roster tem teste próprio.
+vi.mock('./useClassRoster', () => ({
+  useClassRoster: () => ({
+    enrolled: [],
+    available: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    enroll: () => {},
+    unenroll: () => {},
+    isMutating: false,
+    isMutationError: false,
+  }),
+}))
+
 import { ManagerPage } from './ManagerPage'
 
 function baseResult(

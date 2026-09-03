@@ -11,6 +11,7 @@
  */
 import { useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
+import { ClassRoster } from './ClassRoster'
 import { useManagerClasses, type ManagerClass } from './useManagerClasses'
 
 function ManagerSkeleton() {
@@ -192,6 +193,9 @@ function ClassDetail({
       </header>
 
       <GoalEditor turma={turma} onSave={onSetGoal} disabled={disabled} />
+
+      {/* G2: matrículas da turma (lista + busca/adiciona alunos). */}
+      <ClassRoster classId={turma.id} />
     </div>
   )
 }
