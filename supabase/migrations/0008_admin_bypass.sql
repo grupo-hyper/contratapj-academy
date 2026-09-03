@@ -97,3 +97,18 @@ create policy class_goals_admin_all on public.class_goals
 -- faltava. Isso é SEGURO: a RLS de linha continua só-autor/admin, então aluno
 -- comum não lê nenhuma linha da base (usa a view question_options_public).
 grant select (correta) on public.question_options to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 4) GRANTs de escrita para `authenticated` (a RLS ainda gate QUEM escreve)
+-- -----------------------------------------------------------------------------
+-- As tabelas de conteúdo/gestão foram populadas via service_role (ignora grants),
+-- então autor/gestor/admin não conseguiam ESCREVER: sem o privilégio de tabela, a
+-- RLS nem chega a ser avaliada (erro "permission denied for table"). Concedemos
+-- insert/update/delete a authenticated; a RLS (policies só-autor/só-gestor/admin)
+-- continua decidindo quem de fato pode gravar. question_options mantém o SELECT
+-- restrito por coluna (o gabarito não vaza pro aluno) — só write aqui.
+grant select, insert, update, delete
+  on public.modules, public.lessons, public.questions,
+     public.classes, public.enrollments, public.class_goals
+  to authenticated;
+grant insert, update, delete on public.question_options to authenticated;
