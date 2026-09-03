@@ -19,6 +19,7 @@ import type { Lesson, Module } from '../../types/content'
 function mod(ordem: number, publicado = true): Module {
   return {
     id: `m${ordem}`,
+    area_id: 'a1',
     ordem,
     titulo: `Módulo ${ordem}`,
     descricao: null,

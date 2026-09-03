@@ -9,9 +9,33 @@
 /** Papéis de conteúdo (reexport conveniente do papel do perfil). */
 export type Role = 'aluno' | 'gestor' | 'autor'
 
-/** Módulo (12 no total, ordem 1..12). Tabela `modules`. */
+/**
+ * Área (time/trilha de playbooks). Tabela `areas`
+ * (ver `supabase/migrations/0009_areas.sql`).
+ * Agrupa módulos por time (ex.: Comercial, CS, Marketing).
+ * `visibilidade`: 'publica' (visível a todos os alunos) ou 'restrita'
+ * (acesso condicionado — regra definida nas fases seguintes).
+ */
+export interface Area {
+  id: string
+  nome: string
+  slug: string
+  descricao: string | null
+  capa_url: string | null
+  visibilidade: 'publica' | 'restrita'
+  ordem: number
+  publicado: boolean
+  created_at: string
+}
+
+/**
+ * Módulo (12 no total, ordem 1..12). Tabela `modules`.
+ * `area_id`: FK para `areas` (ver `supabase/migrations/0009_areas.sql`) —
+ * todo módulo pertence a uma área.
+ */
 export interface Module {
   id: string
+  area_id: string
   ordem: number
   titulo: string
   descricao: string | null

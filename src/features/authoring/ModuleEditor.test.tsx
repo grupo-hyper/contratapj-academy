@@ -10,6 +10,7 @@ import { ModuleEditor } from './ModuleEditor'
 
 const module: Module = {
   id: 'm1',
+  area_id: 'a1',
   ordem: 1,
   titulo: 'Fundamentos',
   descricao: null,

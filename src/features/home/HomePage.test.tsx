@@ -56,6 +56,7 @@ const MODULE_TITLES: Record<number, string> = {
 function mod(ordem: number): Module {
   return {
     id: `m${ordem}`,
+    area_id: 'a1',
     ordem,
     titulo: MODULE_TITLES[ordem],
     descricao: `Descrição do módulo ${ordem}`,

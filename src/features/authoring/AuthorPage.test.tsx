@@ -12,8 +12,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Lesson, Module } from '../../types/content'
 
 const modules: Module[] = [
-  { id: 'm1', ordem: 1, titulo: 'Mod 1', descricao: null, capa_url: null, publicado: true, created_at: 't' },
-  { id: 'm2', ordem: 2, titulo: 'Mod 2', descricao: null, capa_url: null, publicado: false, created_at: 't' },
+  { id: 'm1', area_id: 'a1', ordem: 1, titulo: 'Mod 1', descricao: null, capa_url: null, publicado: true, created_at: 't' },
+  { id: 'm2', area_id: 'a1', ordem: 2, titulo: 'Mod 2', descricao: null, capa_url: null, publicado: false, created_at: 't' },
 ]
 const lessonsByModule: Record<string, Lesson[]> = {
   m1: [
