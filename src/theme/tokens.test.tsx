@@ -6,7 +6,7 @@ import { cpjColors } from './tokens'
 describe('ContrataPJ theme tokens', () => {
   it('exposes the five brand tokens as the source of truth', () => {
     expect(cpjColors).toEqual({
-      bg: '#0a0a0c',
+      bg: '#000000',
       navy: '#1C265E',
       royal: '#4259DF',
       coral: '#DE5968',
@@ -22,7 +22,7 @@ describe('ContrataPJ theme tokens', () => {
       | undefined
     const cpj = colors?.cpj
     expect(cpj).toEqual(cpjColors)
-    expect(cpj?.bg).toBe('#0a0a0c')
+    expect(cpj?.bg).toBe('#000000')
   })
 
   it('applies the bg-cpj-bg utility class on a rendered element', () => {

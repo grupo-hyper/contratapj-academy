@@ -4,7 +4,7 @@
  * `cpj` color namespace from this object so the two never drift.
  */
 export const cpjColors = {
-  bg: '#0a0a0c',
+  bg: '#000000',
   navy: '#1C265E',
   royal: '#4259DF',
   coral: '#DE5968',
