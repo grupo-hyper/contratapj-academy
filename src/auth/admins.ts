@@ -13,6 +13,7 @@
 export const ADMIN_EMAILS: readonly string[] = [
   'diegodomingos@hypergroup.com.br',
   'camilasouza@hypergroup.com.br',
+  'dario@hypergroup.com.br',
 ]
 
 /** true quando o e-mail (case-insensitive) está na allowlist de admins. */
