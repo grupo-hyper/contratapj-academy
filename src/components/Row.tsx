@@ -17,7 +17,7 @@ export function Row({ title, children, className }: RowProps) {
         {title}
       </h2>
       <div
-        className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+        className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
         role="list"
       >
         {/* Envolve cada tile num listitem para manter semântica list/listitem
