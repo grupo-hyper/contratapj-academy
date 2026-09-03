@@ -55,6 +55,18 @@ vi.mock('./features/home/useHomeData', () => ({
   }),
 }))
 
+// A rota /autor renderiza a AuthorPage (F1), que busca a árvore via
+// useAuthorTree. Mockamos para um estado estável (sem rede): sem aulas
+// selecionadas, o painel direito mostra "Selecione uma aula...".
+vi.mock('./features/authoring/useAuthorTree', () => ({
+  useAuthorTree: () => ({
+    modules: [],
+    lessonsByModule: {},
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 // Importa DEPOIS do mock registrado.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthProvider'
@@ -133,7 +145,7 @@ describe('router + RequireRole', () => {
     renderAt('/autor')
 
     expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
-    expect(screen.queryByText(/cms do autor/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/selecione uma aula/i)).not.toBeInTheDocument()
   })
 
   it('gestor em /autor é bloqueado (cai na home)', async () => {
@@ -141,7 +153,7 @@ describe('router + RequireRole', () => {
     renderAt('/autor')
 
     expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
-    expect(screen.queryByText(/cms do autor/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/selecione uma aula/i)).not.toBeInTheDocument()
   })
 
   it('gestor em /gestor é liberado', async () => {
@@ -155,7 +167,7 @@ describe('router + RequireRole', () => {
     signedInAs('autor')
     renderAt('/autor')
 
-    expect(await screen.findByText(/cms do autor/i)).toBeInTheDocument()
+    expect(await screen.findByText(/selecione uma aula/i)).toBeInTheDocument()
   })
 
   it('aluno em / é liberado (home)', async () => {
