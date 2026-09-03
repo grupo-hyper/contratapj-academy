@@ -72,6 +72,7 @@ describe('LessonPage — player da aula', () => {
       isLoading: false,
       isError: false,
       markConcluded: vi.fn(),
+      unmarkConcluded: vi.fn(),
       isMarking: false,
     })
     renderPage()
@@ -96,6 +97,7 @@ describe('LessonPage — player da aula', () => {
       isLoading: false,
       isError: false,
       markConcluded: vi.fn(),
+      unmarkConcluded: vi.fn(),
       isMarking: false,
     })
     const { container } = renderPage()
@@ -113,27 +115,38 @@ describe('LessonPage — player da aula', () => {
       isLoading: false,
       isError: false,
       markConcluded,
+      unmarkConcluded: vi.fn(),
       isMarking: false,
     })
     renderPage()
 
+    // A aula-base tem uma seção só (sem `## N.`) => conteúdo todo visível =>
+    // o gate libera de imediato e o botão fica clicável.
     fireEvent.click(screen.getByRole('button', { name: /marcar como concluída/i }))
     expect(markConcluded).toHaveBeenCalledTimes(1)
   })
 
-  it('quando já concluída, mostra estado concluído (botão desabilitado)', () => {
+  it('quando já concluída, permite desmarcar a conclusão (clique por engano)', () => {
+    const unmarkConcluded = vi.fn()
     useLessonMock.mockReturnValue({
       lesson: baseLesson(),
       concluida: true,
       isLoading: false,
       isError: false,
       markConcluded: vi.fn(),
+      unmarkConcluded,
       isMarking: false,
     })
     renderPage()
 
-    const btn = screen.getByRole('button', { name: /concluída/i })
-    expect(btn).toBeDisabled()
+    // O selo "Concluída ✓" continua visível; o botão de reverter fica habilitado.
+    expect(screen.getByText(/concluída ✓/i)).toBeInTheDocument()
+    const desmarcar = screen.getByRole('button', { name: /desmarcar conclusão/i })
+    expect(desmarcar).toBeEnabled()
+    fireEvent.click(desmarcar)
+    expect(unmarkConcluded).toHaveBeenCalledTimes(1)
+
+    // Não há mais botão de "marcar como concluída" no estado concluído.
     expect(
       screen.queryByRole('button', { name: /marcar como concluída/i }),
     ).not.toBeInTheDocument()
@@ -146,6 +159,7 @@ describe('LessonPage — player da aula', () => {
       isLoading: false,
       isError: false,
       markConcluded: vi.fn(),
+      unmarkConcluded: vi.fn(),
       isMarking: false,
       isMarkError: true,
     })
@@ -160,6 +174,27 @@ describe('LessonPage — player da aula', () => {
     ).toBeEnabled()
   })
 
+  it('com vários slides, o botão de concluir começa bloqueado (gate do último slide)', () => {
+    useLessonMock.mockReturnValue({
+      lesson: baseLesson({
+        texto_md: '## 1. Primeiro\n\num\n\n## 2. Segundo\n\ndois',
+      }),
+      concluida: false,
+      isLoading: false,
+      isError: false,
+      markConcluded: vi.fn(),
+      unmarkConcluded: vi.fn(),
+      isMarking: false,
+    })
+    renderPage()
+
+    // Ainda no slide 1 de 2 => conteúdo não visto até o fim => botão travado + dica.
+    expect(
+      screen.getByRole('button', { name: /marcar como concluída/i }),
+    ).toBeDisabled()
+    expect(screen.getByText(/avance até o último slide/i)).toBeInTheDocument()
+  })
+
   it('mostra estado de não encontrada quando a aula não existe', () => {
     useLessonMock.mockReturnValue({
       lesson: null,
@@ -167,6 +202,7 @@ describe('LessonPage — player da aula', () => {
       isLoading: false,
       isError: false,
       markConcluded: vi.fn(),
+      unmarkConcluded: vi.fn(),
       isMarking: false,
     })
     renderPage()

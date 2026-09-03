@@ -55,15 +55,16 @@ async function fetchProgress(
   return (data ?? null) as LessonProgress | null
 }
 
-async function upsertConcluded(
+async function upsertProgress(
   profileId: string,
   lessonId: string,
+  concluida: boolean,
 ): Promise<void> {
   // O upsert é na chave única (profile_id, lesson_id). Não enviamos `updated_at`
-  // (trigger BEFORE UPDATE mantém) nem dependemos do default de `pct` — cravamos
-  // 100 porque "concluída" implica 100%.
+  // (trigger BEFORE UPDATE mantém). `pct` acompanha o estado: 100 quando concluída,
+  // 0 ao desmarcar (aluno clicou por engano e quer reverter).
   const { error } = await supabase.from('lesson_progress').upsert(
-    { profile_id: profileId, lesson_id: lessonId, pct: 100, concluida: true },
+    { profile_id: profileId, lesson_id: lessonId, pct: concluida ? 100 : 0, concluida },
     { onConflict: 'profile_id,lesson_id' },
   )
   if (error) throw error
@@ -78,6 +79,8 @@ export interface UseLessonResult {
   error: unknown
   /** Marca a aula como concluída (upsert 100% + invalida a Home). */
   markConcluded: () => void
+  /** Desmarca a conclusão (upsert 0% + invalida a Home) — reverte clique por engano. */
+  unmarkConcluded: () => void
   isMarking: boolean
   /** true se o upsert de conclusão falhou (RLS/rede) — para feedback na UI. */
   isMarkError: boolean
@@ -111,7 +114,8 @@ export function useLesson(
   })
 
   const mutation = useMutation({
-    mutationFn: () => upsertConcluded(userId as string, lessonId as string),
+    mutationFn: (concluida: boolean) =>
+      upsertProgress(userId as string, lessonId as string, concluida),
     onSuccess: () => {
       // Reflete a conclusão no player (a query desta aula) E na Home (a query de
       // progresso do dashboard, mesma chave de `useHomeData.ts`).
@@ -133,7 +137,8 @@ export function useLesson(
     isLoading: !enabled || lessonQuery.isLoading || progressQuery.isLoading,
     isError: lessonQuery.isError || progressQuery.isError,
     error: lessonQuery.error ?? progressQuery.error,
-    markConcluded: () => mutation.mutate(),
+    markConcluded: () => mutation.mutate(true),
+    unmarkConcluded: () => mutation.mutate(false),
     isMarking: mutation.isPending,
     isMarkError: mutation.isError,
     markError: mutation.error,

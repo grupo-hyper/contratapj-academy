@@ -9,6 +9,7 @@
  * grava o progresso (upsert 100%) e invalida a query de progresso da Home, então
  * a trilha do dashboard reflete a conclusão quando o aluno voltar.
  */
+import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { ProgressBar } from '../../components/ProgressBar'
@@ -49,11 +50,18 @@ export function LessonPage() {
     isLoading,
     isError,
     markConcluded,
+    unmarkConcluded,
     isMarking,
     isMarkError,
   } = useLesson(lessonId, profileId)
 
   const showLoading = loading || isLoading
+
+  // Gate de conclusão: o botão "Marcar como concluída" só libera depois que o
+  // aluno vê o conteúdo até o fim (último slide). O <LessonSlides> avisa via
+  // callback; aulas de 0/1 slide liberam de imediato (não há o que percorrer).
+  const [conteudoVisto, setConteudoVisto] = useState(false)
+  const marcarConteudoVisto = useCallback(() => setConteudoVisto(true), [])
 
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
@@ -108,32 +116,52 @@ export function LessonPage() {
 
           <LessonSlides
             markdown={stripSourcesSection(stripLeadingH1(lesson.texto_md))}
+            onLastSlideReached={marcarConteudoVisto}
           />
 
           {/* Bloco de conclusão manual (mecanismo confiável de progresso). */}
           <div className="mt-2 flex flex-col gap-3 border-t border-cpj-white/10 pt-6">
             {concluida ? (
-              <>
+              <div className="flex flex-col gap-3">
                 <ProgressBar value={100} label="Progresso da aula" />
-                <button
-                  type="button"
-                  disabled
-                  className="w-full rounded-xl bg-cpj-navy/60 px-4 py-3 text-sm font-semibold text-cpj-white/70 sm:w-auto"
-                >
-                  Concluída ✓
-                </button>
-              </>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                  <span className="inline-flex items-center justify-center rounded-xl bg-cpj-navy/60 px-4 py-3 text-sm font-semibold text-cpj-white/80 sm:w-auto">
+                    Concluída ✓
+                  </span>
+                  {/* Reverter conclusão feita por engano (upsert concluida=false). */}
+                  <button
+                    type="button"
+                    onClick={unmarkConcluded}
+                    disabled={isMarking}
+                    aria-busy={isMarking}
+                    className="rounded-xl border border-cpj-white/15 px-4 py-3 text-sm font-semibold text-cpj-white/90 transition hover:bg-cpj-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-white/40 disabled:opacity-60 sm:w-auto"
+                  >
+                    {isMarking ? 'Salvando…' : 'Desmarcar conclusão'}
+                  </button>
+                </div>
+                {isMarkError && (
+                  <p role="alert" className="text-sm text-cpj-coral">
+                    Não foi possível salvar. Tente novamente.
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={markConcluded}
-                  disabled={isMarking}
+                  disabled={isMarking || !conteudoVisto}
                   aria-busy={isMarking}
-                  className="w-full rounded-xl bg-cpj-coral px-4 py-3 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral disabled:opacity-60 sm:w-auto"
+                  className="w-full rounded-xl bg-cpj-coral px-4 py-3 text-sm font-semibold text-cpj-white transition hover:bg-cpj-coral/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
                   {isMarking ? 'Salvando…' : 'Marcar como concluída'}
                 </button>
+                {/* Enquanto o aluno não chegou ao último slide, explica o bloqueio. */}
+                {!conteudoVisto && (
+                  <p className="text-sm text-cpj-white/50">
+                    Avance até o último slide para liberar a conclusão.
+                  </p>
+                )}
                 {/* Falha do upsert (RLS/rede): botão continua clicável p/ retry. */}
                 {isMarkError && (
                   <p role="alert" className="text-sm text-cpj-coral">

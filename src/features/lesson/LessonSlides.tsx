@@ -25,9 +25,19 @@ interface LessonSlidesProps {
    * Usado no PREVIEW do editor do autor. Default true (comportamento do player).
    */
   gated?: boolean
+  /**
+   * Notifica quando o aluno alcança o ÚLTIMO slide (ou quando não há navegação
+   * possível — 0 ou 1 seção). A LessonPage usa isso para liberar o botão
+   * "Marcar como concluída" só depois de ver o conteúdo até o fim.
+   */
+  onLastSlideReached?: () => void
 }
 
-export function LessonSlides({ markdown, gated = true }: LessonSlidesProps) {
+export function LessonSlides({
+  markdown,
+  gated = true,
+  onLastSlideReached,
+}: LessonSlidesProps) {
   const slides = useMemo(() => splitIntoSlides(markdown), [markdown])
   const [index, setIndex] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(SLIDE_UNLOCK_SECONDS)
@@ -54,6 +64,13 @@ export function LessonSlides({ markdown, gated = true }: LessonSlidesProps) {
     }, 1000)
     return () => clearInterval(id)
   }, [index, isLast, gated])
+
+  // Libera a conclusão quando o aluno chega ao fim do conteúdo. `index >= total-1`
+  // cobre os três casos: sem texto (total 0 → dispara já, não há o que travar),
+  // uma seção só (total 1 → dispara no mount) e várias (dispara no último slide).
+  useEffect(() => {
+    if (index >= total - 1) onLastSlideReached?.()
+  }, [index, total, onLastSlideReached])
 
   if (total === 0) {
     return (
