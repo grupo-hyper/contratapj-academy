@@ -7,11 +7,11 @@ import {
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
-import { GestorStub } from './features/_stubs'
 import { AuthorPage } from './features/authoring/AuthorPage'
 import { GoalsPage } from './features/goals/GoalsPage'
 import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
+import { ManagerPage } from './features/manager/ManagerPage'
 import { QuizPage } from './features/quiz/QuizPage'
 
 // Lazy-load só esta rota: tira o `pdf-lib` (+ deps) do bundle inicial eager.
@@ -69,7 +69,7 @@ export const routes: RouteObject[] = [
         path: '/gestor',
         element: (
           <RequireRole allow={['gestor']}>
-            <GestorStub />
+            <ManagerPage />
           </RequireRole>
         ),
       },

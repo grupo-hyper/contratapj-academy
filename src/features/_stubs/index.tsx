@@ -11,11 +11,3 @@ export function HomeStub() {
   )
 }
 
-// TODO Fase 5/6: substituir stub pelo painel real do gestor.
-export function GestorStub() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-cpj-bg text-cpj-white">
-      <h1 className="text-2xl font-bold">Painel do gestor</h1>
-    </main>
-  )
-}

@@ -67,6 +67,24 @@ vi.mock('./features/authoring/useAuthorTree', () => ({
   }),
 }))
 
+// A rota /gestor renderiza a ManagerPage, que busca as turmas via
+// useManagerClasses. Mockamos para um estado estável (sem rede): sem turma
+// selecionada, o painel direito mostra "Selecione uma turma...".
+vi.mock('./features/manager/useManagerClasses', () => ({
+  useManagerClasses: () => ({
+    classes: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    createClass: () => {},
+    renameClass: () => {},
+    deleteClass: () => {},
+    setGoal: () => {},
+    isMutating: false,
+    isMutationError: false,
+  }),
+}))
+
 // Importa DEPOIS do mock registrado.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthProvider'
@@ -137,7 +155,7 @@ describe('router + RequireRole', () => {
     renderAt('/gestor')
 
     expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
-    expect(screen.queryByText(/painel do gestor/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/selecione uma turma/i)).not.toBeInTheDocument()
   })
 
   it('aluno em /autor é bloqueado (cai na home)', async () => {
@@ -160,7 +178,7 @@ describe('router + RequireRole', () => {
     signedInAs('gestor')
     renderAt('/gestor')
 
-    expect(await screen.findByText(/painel do gestor/i)).toBeInTheDocument()
+    expect(await screen.findByText(/selecione uma turma/i)).toBeInTheDocument()
   })
 
   it('autor em /autor é liberado', async () => {
