@@ -38,6 +38,18 @@ vi.mock('./useClassRoster', () => ({
   }),
 }))
 
+// O detalhe também renderiza <ClassDashboard> (useClassDashboard). Roster e ritmo
+// têm testes próprios; aqui só precisamos de um estado estável sem rede.
+vi.mock('./useClassDashboard', () => ({
+  useClassDashboard: () => ({
+    rows: [],
+    totalModules: 0,
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}))
+
 import { ManagerPage } from './ManagerPage'
 
 function baseResult(

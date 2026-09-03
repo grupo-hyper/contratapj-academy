@@ -11,6 +11,7 @@
  */
 import { useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
+import { ClassDashboard } from './ClassDashboard'
 import { ClassRoster } from './ClassRoster'
 import { useManagerClasses, type ManagerClass } from './useManagerClasses'
 
@@ -196,6 +197,9 @@ function ClassDetail({
 
       {/* G2: matrículas da turma (lista + busca/adiciona alunos). */}
       <ClassRoster classId={turma.id} />
+
+      {/* G3: dashboard de ritmo (concluídos vs. esperado por aluno). */}
+      <ClassDashboard classId={turma.id} modulesPerWeek={turma.modulesPerWeek} />
     </div>
   )
 }
