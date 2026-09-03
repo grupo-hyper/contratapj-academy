@@ -59,7 +59,7 @@ function ReorderButtons({
   const base =
     'rounded px-1 text-xs text-cpj-white/50 transition hover:text-cpj-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal disabled:cursor-not-allowed disabled:opacity-30'
   return (
-    <span className="flex items-center">
+    <span className="flex shrink-0 items-center">
       <button
         type="button"
         onClick={onUp}
@@ -110,7 +110,7 @@ export function AuthorTree({
                 type="button"
                 onClick={() => onSelectModule?.(module.id)}
                 aria-current={isModuleSelected ? 'true' : undefined}
-                className={`flex flex-1 items-center rounded-lg px-2 py-1 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal ${
+                className={`flex min-w-0 flex-1 items-center rounded-lg px-2 py-1 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal ${
                   isModuleSelected
                     ? 'bg-cpj-royal/25 text-cpj-white'
                     : 'text-cpj-white/80 hover:bg-cpj-white/5'
@@ -136,7 +136,7 @@ export function AuthorTree({
                   type="button"
                   onClick={() => onDeleteModule(module)}
                   aria-label={`Excluir módulo ${module.titulo}`}
-                  className="rounded px-1 text-xs text-cpj-white/50 transition hover:text-cpj-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral"
+                  className="shrink-0 rounded px-1 text-xs text-cpj-white/50 transition hover:text-cpj-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral"
                 >
                   Excluir
                 </button>
@@ -156,7 +156,7 @@ export function AuthorTree({
                       type="button"
                       onClick={() => onSelectLesson(lesson.id)}
                       aria-current={isSelected ? 'true' : undefined}
-                      className={`flex flex-1 items-center rounded-lg px-4 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal ${
+                      className={`flex min-w-0 flex-1 items-center rounded-lg px-4 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal ${
                         isSelected
                           ? 'bg-cpj-royal/25 text-cpj-white'
                           : 'text-cpj-white/70 hover:bg-cpj-white/5'
@@ -182,7 +182,7 @@ export function AuthorTree({
                         type="button"
                         onClick={() => onDeleteLesson(lesson)}
                         aria-label={`Excluir aula ${lesson.titulo}`}
-                        className="rounded px-1 text-xs text-cpj-white/50 transition hover:text-cpj-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral"
+                        className="shrink-0 rounded px-1 text-xs text-cpj-white/50 transition hover:text-cpj-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-coral"
                       >
                         Excluir
                       </button>

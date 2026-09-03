@@ -169,8 +169,9 @@ export function AuthorPage() {
   return (
     <main className="ocean-bg min-h-screen text-cpj-white">
       <div className="grid gap-6 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
-        {/* Painel esquerdo: árvore. */}
-        <aside className="rounded-2xl border border-cpj-white/10 bg-cpj-navy/10 p-3">
+        {/* Painel esquerdo: árvore. min-w-0 impede que títulos longos + controles
+            estourem a faixa de 18rem e invadam o editor. */}
+        <aside className="min-w-0 rounded-2xl border border-cpj-white/10 bg-cpj-navy/10 p-3">
           <h1 className="mb-3 px-2 text-sm font-bold uppercase tracking-wide text-cpj-white/50">
             Conteúdo
           </h1>
@@ -204,7 +205,7 @@ export function AuthorPage() {
         </aside>
 
         {/* Painel direito: editor de módulo, de aula, ou placeholder. */}
-        <section className="rounded-2xl border border-cpj-white/10 bg-cpj-navy/10 p-4 md:p-6">
+        <section className="min-w-0 rounded-2xl border border-cpj-white/10 bg-cpj-navy/10 p-4 md:p-6">
           {selectedModule ? (
             <ModuleEditor
               key={selectedModule.id}
