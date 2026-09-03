@@ -88,12 +88,22 @@ function HomeSkeleton() {
   )
 }
 
-export function HomePage() {
+export interface HomePageProps {
+  /**
+   * Escopa a trilha a uma Área específica (Task 6, Fase 1 de Áreas). Quando
+   * omitido, mantém o comportamento original: trilha completa (todos os
+   * módulos publicados), usada no hub `/` (Home). Repassado direto para
+   * `useHomeData`, que já sabe filtrar por `area_id` (Task 5).
+   */
+  areaId?: string
+}
+
+export function HomePage({ areaId }: HomePageProps = {}) {
   const { profile, user, loading } = useAuth()
   const navigate = useNavigate()
 
   const profileId = profile?.id ?? user?.id
-  const { data, isLoading, isError } = useHomeData(profileId)
+  const { data, isLoading, isError } = useHomeData(profileId, areaId)
 
   // Deriva os alvos do Hero a partir do estado da trilha.
   const heroModel = useMemo(() => {
