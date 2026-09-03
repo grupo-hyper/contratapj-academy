@@ -4,6 +4,8 @@ import {
   collectSeed,
   parseLessonFile,
   parseModuleOrdem,
+  stripFrontmatter,
+  extractTitleFromH1,
   DEFAULT_PLAYBOOKS_DIR,
   MODULE_TITLES,
 } from './seed-lessons'
@@ -20,14 +22,36 @@ describe('parseModuleOrdem', () => {
 })
 
 describe('parseLessonFile', () => {
-  it('extrai ordem e título de "PB-MM.NN — Titulo.md"', () => {
-    expect(parseLessonFile('PB-01.05 — WhatsApp- Papel e Limites.md')).toEqual({
-      ordem: 5,
-      titulo: 'WhatsApp- Papel e Limites',
-    })
+  it('extrai a ordem de "NN.MM-slug-do-titulo.md"', () => {
+    expect(parseLessonFile('05.03-tecnicas-de-reformulacao.md')).toEqual({ ordem: 3 })
+    expect(parseLessonFile('10.28-ultimo-script.md')).toEqual({ ordem: 28 })
   })
   it('rejeita nomes fora do padrão', () => {
     expect(parseLessonFile('leia-me.md')).toBeNull()
+  })
+})
+
+describe('stripFrontmatter', () => {
+  it('remove o bloco --- ... --- do início e o espaço em branco seguinte', () => {
+    const raw = '---\nplaybook: PB-05.03\nstatus: ativo\n---\n\n# PB-05.03 - Título\n\nCorpo.'
+    expect(stripFrontmatter(raw)).toBe('# PB-05.03 - Título\n\nCorpo.')
+  })
+  it('devolve o conteúdo intacto quando não há frontmatter', () => {
+    expect(stripFrontmatter('# PB-05.03 - Título\n\nCorpo.')).toBe('# PB-05.03 - Título\n\nCorpo.')
+  })
+})
+
+describe('extractTitleFromH1', () => {
+  it('extrai o título de "# PB-MM.NN - Título" (hífen, en dash ou travessão)', () => {
+    expect(extractTitleFromH1('# PB-05.03 - Técnicas de Reformulação\n\nCorpo.')).toBe(
+      'Técnicas de Reformulação',
+    )
+    expect(extractTitleFromH1('# PB-05.03 — Técnicas de Reformulação')).toBe(
+      'Técnicas de Reformulação',
+    )
+  })
+  it('retorna null quando a 1ª linha não é o h1 esperado', () => {
+    expect(extractTitleFromH1('Corpo sem h1.')).toBeNull()
   })
 })
 

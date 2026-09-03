@@ -1,17 +1,21 @@
 /**
  * Seed dos 184 playbooks (ContrataPJ Academy).
  *
- * Lê os arquivos Markdown de `_NotebookLM-MD/<NN-Modulo>/PB-MM.NN — Titulo.md`,
- * monta 12 módulos (ordem/nome fixos) e 184 aulas, e faz upsert idempotente
- * (módulos por `ordem`, aulas por `module_id + ordem`).
+ * Lê os arquivos Markdown de `<NN-Modulo>/NN.MM-slug-do-titulo.md` (série
+ * oficial revisada, com frontmatter YAML + h1 `# PB-MM.NN - Título`), monta 12
+ * módulos (ordem/nome fixos) e 184 aulas, e faz upsert idempotente (módulos por
+ * `ordem`, aulas por `module_id + ordem`). O frontmatter é removido do
+ * `texto_md` gravado; o título da aula vem do h1, não do nome do arquivo.
  *
  * Uso:
- *   PLAYBOOKS_DIR="/caminho/_NotebookLM-MD" \
+ *   PLAYBOOKS_DIR="/caminho/Playbooks" \
  *   SUPABASE_URL="https://xxxx.supabase.co" \
  *   SUPABASE_SERVICE_ROLE_KEY="..." \
- *   npx tsx scripts/seed-lessons.ts            # aplica no banco
+ *   npx tsx --import ./wspoly.mjs scripts/seed-lessons.ts   # aplica no banco
+ *   (--import ./wspoly.mjs: polyfill de WebSocket p/ Node 20, exigido pelo
+ *   client do Supabase mesmo em scripts que só fazem upsert via REST)
  *
- *   npx tsx scripts/seed-lessons.ts --dry-run  # só conta, não grava
+ *   npx tsx scripts/seed-lessons.ts --dry-run  # só conta, não grava (não precisa do polyfill)
  *
  * A parte de leitura/parse (`collectSeed`) é pura e sem I/O de rede, para o teste.
  */
@@ -20,7 +24,7 @@ import { join } from 'node:path'
 
 /** Caminho-fonte padrão (vault do Diego); sobrescreva via PLAYBOOKS_DIR. */
 export const DEFAULT_PLAYBOOKS_DIR =
-  '/home/diego/segundo-cerebro/Empresas/Contrata PJ/Comercial/Playbooks/_NotebookLM-MD'
+  '/home/diego/segundo-cerebro/Empresas/Contrata PJ/Comercial/Playbooks'
 
 /** Nomes oficiais dos 12 módulos, indexados pela ordem (1..12). */
 export const MODULE_TITLES: Record<number, string> = {
@@ -65,18 +69,36 @@ export function parseModuleOrdem(folderName: string): number | null {
 }
 
 /**
- * Extrai ordem + título de um nome de arquivo `PB-MM.NN — Titulo.md`.
- * A ordem da aula vem do sufixo `.NN`; o título é o texto após o travessão.
+ * Extrai a ordem da aula de um nome de arquivo `NN.MM-slug-do-titulo.md`
+ * (ex.: `05.03-tecnicas-de-reformulacao.md` → 3). O título NÃO vem mais do
+ * nome do arquivo (é um slug); vem do h1 do conteúdo (`extractTitleFromH1`).
  */
-export function parseLessonFile(fileName: string): { ordem: number; titulo: string } | null {
+export function parseLessonFile(fileName: string): { ordem: number } | null {
   const base = fileName.replace(/\.md$/i, '')
-  // PB-01.05 — Título   (aceita travessão em dash "—" ou hífen "-")
-  const m = /^PB-\d{1,2}\.(\d{1,3})\s*[—–-]\s*(.+)$/.exec(base)
+  const m = /^\d{1,2}\.(\d{1,3})-.+$/.exec(base)
   if (!m) return null
   const ordem = Number(m[1])
-  const titulo = m[2].trim()
-  if (!Number.isFinite(ordem) || !titulo) return null
-  return { ordem, titulo }
+  return Number.isFinite(ordem) ? { ordem } : null
+}
+
+// Bloco de frontmatter YAML no início do arquivo: `---\n...\n---` + linha em branco.
+const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/
+
+/** Remove o bloco de frontmatter YAML do início do conteúdo, se houver. */
+export function stripFrontmatter(content: string): string {
+  return content.replace(FRONTMATTER, '').replace(/^\s+/, '')
+}
+
+// `# PB-MM.NN - Título` (aceita travessão "—", en dash "–" ou hífen "-") — mesmo
+// padrão que o client espera em `src/features/lesson/lessonTitle.ts`.
+const H1_TITLE = /^#\s*PB-\d{1,2}\.\d{1,3}\s*[—–-]\s*(.+?)\s*$/
+
+/** Extrai o título do 1º h1 `# PB-MM.NN - Título` do corpo (após remover frontmatter). */
+export function extractTitleFromH1(body: string): string | null {
+  const firstLine = body.split('\n').find((l) => l.trim() !== '')
+  if (!firstLine) return null
+  const m = H1_TITLE.exec(firstLine.trim())
+  return m ? m[1] : null
 }
 
 /**
@@ -98,6 +120,9 @@ export function collectSeed(dir: string = DEFAULT_PLAYBOOKS_DIR): SeedData {
     .sort()
 
   for (const folder of folders) {
+    // Pastas auxiliares (ex.: `_NotebookLM-MD`, fonte bruta anterior) não são módulos.
+    if (folder.startsWith('_')) continue
+
     const ordem = parseModuleOrdem(folder)
     if (ordem == null) {
       throw new Error(`Pasta de módulo fora do padrão "NN-Nome": ${folder}`)
@@ -112,13 +137,18 @@ export function collectSeed(dir: string = DEFAULT_PLAYBOOKS_DIR): SeedData {
     for (const file of files) {
       const parsed = parseLessonFile(file)
       if (!parsed) {
-        throw new Error(`Arquivo de aula fora do padrão "PB-MM.NN — Titulo.md": ${folder}/${file}`)
+        throw new Error(`Arquivo de aula fora do padrão "NN.MM-slug.md": ${folder}/${file}`)
       }
-      const texto_md = readFileSync(join(dir, folder, file), 'utf8')
+      const raw = readFileSync(join(dir, folder, file), 'utf8')
+      const texto_md = stripFrontmatter(raw)
+      const titulo = extractTitleFromH1(texto_md)
+      if (!titulo) {
+        throw new Error(`Não encontrei o h1 "# PB-MM.NN - Título" em: ${folder}/${file}`)
+      }
       lessons.push({
         module_ordem: ordem,
         ordem: parsed.ordem,
-        titulo: parsed.titulo,
+        titulo,
         texto_md,
         youtube_id: '',
       })
@@ -164,14 +194,16 @@ async function main(): Promise<void> {
   if (mErr) throw mErr
   const idByOrdem = new Map<number, string>((mods ?? []).map((m) => [m.ordem, m.id]))
 
-  // 2) upsert aulas (por module_id + ordem)
+  // 2) upsert aulas (por module_id + ordem). NÃO envia `youtube_id`/`publicado`:
+  // são campos que o CMS do autor edita direto no banco (LessonEditor.tsx); como
+  // o upsert do Supabase só atualiza as colunas presentes no payload, omiti-los
+  // preserva o vídeo e o estado rascunho/publicado já definidos pelo autor em
+  // aulas existentes (só título e texto são atualizados pelo re-seed).
   const rows = data.lessons.map((l) => ({
     module_id: idByOrdem.get(l.module_ordem),
     ordem: l.ordem,
     titulo: l.titulo,
     texto_md: l.texto_md,
-    youtube_id: l.youtube_id,
-    publicado: true,
   }))
   const { error: lErr } = await db.from('lessons').upsert(rows, { onConflict: 'module_id,ordem' })
   if (lErr) throw lErr
