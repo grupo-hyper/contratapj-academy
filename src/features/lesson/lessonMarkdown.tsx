@@ -19,6 +19,7 @@
  */
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { stripInlineCitations } from './lessonTitle'
 
 /** Nó mínimo do hast que consumimos (react-markdown passa `node`). */
 type HastNode = {
@@ -187,10 +188,13 @@ interface LessonMarkdownProps {
 
 /** Render puro de uma fatia de markdown com a identidade das propostas. */
 export function LessonMarkdown({ markdown }: LessonMarkdownProps) {
+  // Remove as citações de fonte inline ("(ID, data)") antes de renderizar — vale
+  // para player, slides e preview do autor (todos passam por aqui).
+  const limpo = stripInlineCitations(markdown)
   return (
     <div className="lesson-prose max-w-none font-sans text-cpj-white/90">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-        {markdown}
+        {limpo}
       </ReactMarkdown>
     </div>
   )

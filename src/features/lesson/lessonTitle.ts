@@ -104,3 +104,20 @@ export function stripSourcesSection(md: string | null | undefined): string {
   if (j >= 0 && /^-{3,}\s*$/.test(lines[j].trim())) start = j
   return lines.slice(0, start).join('\n').trim()
 }
+
+// Citações de fonte inline que o NotebookLM embutiu no texto: "(IDdaFonte, data)",
+// às vezes entre crases (`...`). O ID é um token estilo YouTube (8+ chars de
+// letras/dígitos/_/-, COM ao menos um dígito) seguido de ", AAAA-MM-DD"; exigir o
+// dígito evita remover parênteses legítimos da prosa (ex.: "(Contrato, 2024-...)").
+// Consome também a crase e o espaço imediatamente antes da citação.
+const INLINE_CITATION =
+  /\s*`?\((?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{8,},\s*\d{4}-\d{2}-\d{2}\)`?/g
+
+/**
+ * Remove as citações de fonte inline ("(ID, data)") embutidas no texto das aulas.
+ * O aluno e o autor não devem vê-las no conteúdo renderizado.
+ */
+export function stripInlineCitations(md: string | null | undefined): string {
+  if (!md) return ''
+  return md.replace(INLINE_CITATION, '')
+}

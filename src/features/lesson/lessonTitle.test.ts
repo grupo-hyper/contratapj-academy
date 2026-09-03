@@ -4,6 +4,7 @@ import {
   firstMarkdownLine,
   stripLeadingH1,
   stripSourcesSection,
+  stripInlineCitations,
 } from './lessonTitle'
 
 describe('parseLessonTitle', () => {
@@ -75,5 +76,40 @@ describe('stripSourcesSection', () => {
     expect(stripSourcesSection('## 1. Objetivo\ntexto')).toBe(
       '## 1. Objetivo\ntexto',
     )
+  })
+})
+
+describe('stripInlineCitations', () => {
+  it('remove a citação entre crases (com o espaço antes)', () => {
+    expect(
+      stripInlineCitations('derruba a conexão. `(2J3eXja_D1U, 2020-10-19)` Toda'),
+    ).toBe('derruba a conexão. Toda')
+  })
+
+  it('remove a citação sem crases', () => {
+    expect(stripInlineCitations('qualifica um lead (a9aJKiofVbI, 2022-11-14).')).toBe(
+      'qualifica um lead.',
+    )
+  })
+
+  it('remove várias citações no mesmo texto', () => {
+    expect(
+      stripInlineCitations('a `(whOcCdB44F4, 2024-01-11)` e b (2J3eXja_D1U, 2020-10-19)!'),
+    ).toBe('a e b!')
+  })
+
+  it('preserva parênteses legítimos (sem ID/data ou sem dígito)', () => {
+    expect(stripInlineCitations('empresa (B2B) prioriza risco.')).toBe(
+      'empresa (B2B) prioriza risco.',
+    )
+    // Token sem dígito não é citação, mesmo com data ao lado.
+    expect(stripInlineCitations('assinado (Contrato, 2024-01-11) ontem.')).toBe(
+      'assinado (Contrato, 2024-01-11) ontem.',
+    )
+  })
+
+  it('trata nulo/vazio', () => {
+    expect(stripInlineCitations(null)).toBe('')
+    expect(stripInlineCitations('')).toBe('')
   })
 })
