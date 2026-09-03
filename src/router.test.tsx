@@ -85,6 +85,18 @@ vi.mock('./features/manager/useManagerClasses', () => ({
   }),
 }))
 
+// A raiz `/` agora renderiza a AreaHubPage (Task 7), e `/area/:slug` a
+// AreaTrilhaPage — ambas usam useAreas. Mockamos para um estado estável (sem
+// rede): nenhuma área publicada => marcador previsível no hub.
+vi.mock('./features/areas/useAreas', () => ({
+  useAreas: () => ({
+    areas: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}))
+
 // Importa DEPOIS do mock registrado.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthProvider'
@@ -147,30 +159,30 @@ describe('router + RequireRole', () => {
     expect(
       await screen.findByRole('heading', { name: /contratapj academy/i }),
     ).toBeInTheDocument()
-    expect(screen.queryByText(/nenhum módulo publicado/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nenhuma área publicada/i)).not.toBeInTheDocument()
   })
 
-  it('aluno em /gestor é bloqueado (cai na home)', async () => {
+  it('aluno em /gestor é bloqueado (cai no hub de áreas)', async () => {
     signedInAs('aluno')
     renderAt('/gestor')
 
-    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma área publicada/i)).toBeInTheDocument()
     expect(screen.queryByText(/selecione uma turma/i)).not.toBeInTheDocument()
   })
 
-  it('aluno em /autor é bloqueado (cai na home)', async () => {
+  it('aluno em /autor é bloqueado (cai no hub de áreas)', async () => {
     signedInAs('aluno')
     renderAt('/autor')
 
-    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma área publicada/i)).toBeInTheDocument()
     expect(screen.queryByText(/selecione um módulo/i)).not.toBeInTheDocument()
   })
 
-  it('gestor em /autor é bloqueado (cai na home)', async () => {
+  it('gestor em /autor é bloqueado (cai no hub de áreas)', async () => {
     signedInAs('gestor')
     renderAt('/autor')
 
-    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma área publicada/i)).toBeInTheDocument()
     expect(screen.queryByText(/selecione um módulo/i)).not.toBeInTheDocument()
   })
 
@@ -188,17 +200,24 @@ describe('router + RequireRole', () => {
     expect(await screen.findByText(/selecione um módulo/i)).toBeInTheDocument()
   })
 
-  it('aluno em / é liberado (home)', async () => {
+  it('aluno em / é liberado (hub de áreas)', async () => {
     signedInAs('aluno')
     renderAt('/')
 
-    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma área publicada/i)).toBeInTheDocument()
   })
 
-  it('rota desconhecida cai na home', async () => {
+  it('rota desconhecida cai no hub de áreas', async () => {
     signedInAs('aluno')
     renderAt('/rota-que-nao-existe')
 
-    expect(await screen.findByText(/nenhum módulo publicado/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma área publicada/i)).toBeInTheDocument()
+  })
+
+  it('aluno em /area/:slug com slug inexistente vê "Área não encontrada"', async () => {
+    signedInAs('aluno')
+    renderAt('/area/comercial')
+
+    expect(await screen.findByText(/área não encontrada/i)).toBeInTheDocument()
   })
 })

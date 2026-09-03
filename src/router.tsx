@@ -8,8 +8,9 @@ import { LoginPage } from './features/auth/LoginPage'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
 import { AuthorPage } from './features/authoring/AuthorPage'
+import { AreaHubPage } from './features/areas/AreaHubPage'
+import { AreaTrilhaPage } from './features/areas/AreaTrilhaPage'
 import { GoalsPage } from './features/goals/GoalsPage'
-import { HomePage } from './features/home/HomePage'
 import { LessonPage } from './features/lesson/LessonPage'
 import { ManagerPage } from './features/manager/ManagerPage'
 import { QuizPage } from './features/quiz/QuizPage'
@@ -47,7 +48,11 @@ export const routes: RouteObject[] = [
       </RequireRole>
     ),
     children: [
-      { path: '/', element: <HomePage /> },
+      // Hub de Áreas. Qualquer papel autenticado.
+      { path: '/', element: <AreaHubPage /> },
+      // Trilha de uma Área específica (resolve :slug -> Area e delega pra
+      // HomePage com areaId). Qualquer papel autenticado.
+      { path: '/area/:slug', element: <AreaTrilhaPage /> },
       // Painel de ritmo/metas do aluno. Qualquer papel autenticado.
       { path: '/metas', element: <GoalsPage /> },
       // Player da aula. Qualquer papel autenticado (como a Home).
