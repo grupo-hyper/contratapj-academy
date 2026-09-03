@@ -19,13 +19,26 @@ import { useAreas } from './useAreas'
 
 export function AreaTrilhaPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { areas, isLoading } = useAreas()
+  const { areas, isLoading, isError } = useAreas()
 
   if (isLoading) {
     return (
       <main className="ocean-bg min-h-screen text-cpj-white">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center text-cpj-white/70">
           <p className="text-lg font-semibold text-cpj-white">Carregando…</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (isError) {
+    return (
+      <main className="ocean-bg min-h-screen text-cpj-white">
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center text-cpj-white/70">
+          <p className="text-lg font-semibold text-cpj-white">
+            Não foi possível carregar a área.
+          </p>
+          <p className="mt-2 text-sm">Tente recarregar a página em instantes.</p>
         </div>
       </main>
     )

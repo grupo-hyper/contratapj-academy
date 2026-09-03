@@ -157,6 +157,26 @@ describe('AreaTrilhaPage — trilha da área (/area/:slug)', () => {
     expect(screen.getByText(/área não encontrada/i)).toBeInTheDocument()
   })
 
+  it('quando useAreas falha (isError), mostra erro de carregamento, NÃO "não encontrada"', () => {
+    useAreasMock.mockReturnValue({
+      areas: [],
+      isLoading: false,
+      isError: true,
+      error: new Error('network error'),
+    })
+    useHomeDataMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+
+    renderAt('/area/comercial')
+
+    expect(screen.getByText(/não foi possível carregar a área/i)).toBeInTheDocument()
+    expect(screen.queryByText(/área não encontrada/i)).not.toBeInTheDocument()
+  })
+
   it('enquanto useAreas carrega, mostra estado de carregamento (sem "não encontrada")', () => {
     useAreasMock.mockReturnValue({
       areas: [],
