@@ -45,4 +45,92 @@ describe('AuthorTree', () => {
     const selected = screen.getByRole('button', { name: /Aula A/ })
     expect(selected).toHaveAttribute('aria-current', 'true')
   })
+
+  it('clicar no módulo chama onSelectModule e marca aria-current', () => {
+    const onSelectModule = vi.fn()
+    render(
+      <AuthorTree
+        modules={modules}
+        lessonsByModule={lessonsByModule}
+        selectedLessonId={null}
+        selectedModuleId="m2"
+        onSelectLesson={vi.fn()}
+        onSelectModule={onSelectModule}
+      />,
+    )
+    const mod = screen.getByRole('button', { name: /Fundamentos/ })
+    fireEvent.click(mod)
+    expect(onSelectModule).toHaveBeenCalledWith('m1')
+    expect(screen.getByRole('button', { name: /Avançado/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+  })
+
+  it('criar módulo e criar aula chamam os callbacks certos', () => {
+    const onCreateModule = vi.fn()
+    const onCreateLesson = vi.fn()
+    render(
+      <AuthorTree
+        modules={modules}
+        lessonsByModule={lessonsByModule}
+        selectedLessonId={null}
+        onSelectLesson={vi.fn()}
+        onCreateModule={onCreateModule}
+        onCreateLesson={onCreateLesson}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Novo módulo/ }))
+    expect(onCreateModule).toHaveBeenCalledTimes(1)
+    // A primeira "+ nova aula" pertence ao módulo m1.
+    fireEvent.click(screen.getAllByRole('button', { name: /nova aula/ })[0])
+    expect(onCreateLesson).toHaveBeenCalledWith('m1')
+  })
+
+  it('excluir módulo/aula chamam os callbacks com o item', () => {
+    const onDeleteModule = vi.fn()
+    const onDeleteLesson = vi.fn()
+    render(
+      <AuthorTree
+        modules={modules}
+        lessonsByModule={lessonsByModule}
+        selectedLessonId={null}
+        onSelectLesson={vi.fn()}
+        onDeleteModule={onDeleteModule}
+        onDeleteLesson={onDeleteLesson}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Excluir módulo Fundamentos/ }))
+    expect(onDeleteModule).toHaveBeenCalledWith(modules[0])
+    fireEvent.click(screen.getByRole('button', { name: /Excluir aula Aula A/ }))
+    expect(onDeleteLesson).toHaveBeenCalledWith(lessonsByModule.m1[0])
+  })
+
+  it('setas ↑↓ reordenam e ficam desabilitadas nas pontas', () => {
+    const onReorderModule = vi.fn()
+    const onReorderLesson = vi.fn()
+    render(
+      <AuthorTree
+        modules={modules}
+        lessonsByModule={lessonsByModule}
+        selectedLessonId={null}
+        onSelectLesson={vi.fn()}
+        onReorderModule={onReorderModule}
+        onReorderLesson={onReorderLesson}
+      />,
+    )
+    // ↑ do primeiro módulo está desabilitado; ↓ dele desce (dir +1).
+    const upM1 = screen.getByRole('button', { name: /Mover módulo Fundamentos para cima/ })
+    const downM1 = screen.getByRole('button', { name: /Mover módulo Fundamentos para baixo/ })
+    expect(upM1).toBeDisabled()
+    fireEvent.click(downM1)
+    expect(onReorderModule).toHaveBeenCalledWith(modules[0], 1)
+
+    // ↓ da última aula (Aula B) está desabilitada; ↑ dela sobe (dir -1).
+    const downLB = screen.getByRole('button', { name: /Mover aula Aula B para baixo/ })
+    const upLB = screen.getByRole('button', { name: /Mover aula Aula B para cima/ })
+    expect(downLB).toBeDisabled()
+    fireEvent.click(upLB)
+    expect(onReorderLesson).toHaveBeenCalledWith(lessonsByModule.m1[1], -1)
+  })
 })
