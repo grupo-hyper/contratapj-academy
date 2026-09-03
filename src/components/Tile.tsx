@@ -60,7 +60,7 @@ const LockIcon = () => (
 
 const stateRing: Record<TileState, string> = {
   done: 'ring-1 ring-cpj-white/25',
-  current: 'ring-2 ring-cpj-coral',
+  current: 'ring-2 ring-cpj-royal',
   locked: 'ring-1 ring-cpj-white/10',
 }
 
