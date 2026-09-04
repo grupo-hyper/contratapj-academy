@@ -89,7 +89,7 @@ export function Row({ title, children, className }: RowProps) {
         <div
           ref={scrollerRef}
           onScroll={updateScrollState}
-          className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+          className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
           role="list"
         >
           {/* Envolve cada tile num listitem para manter semântica list/listitem
