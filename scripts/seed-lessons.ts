@@ -183,12 +183,29 @@ async function main(): Promise<void> {
   const { createClient } = await import('@supabase/supabase-js')
   const db = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  // 1) upsert módulos (por ordem) e mapeia ordem -> id
+  // 0) resolve a área "comercial" (migration 0009 tornou a ordem única POR ÁREA:
+  // `unique(area_id, ordem)` no lugar de `unique(ordem)`). Os 184 playbooks são
+  // todos da área comercial; o upsert precisa do area_id no payload e no
+  // onConflict, senão dá 42P10 (no unique/exclusion constraint matching).
+  const { data: area, error: aErr } = await db
+    .from('areas')
+    .select('id')
+    .eq('slug', 'comercial')
+    .single()
+  if (aErr) throw aErr
+  const areaId = (area as { id: string }).id
+
+  // 1) upsert módulos (por area_id+ordem) e mapeia ordem -> id
   const { data: mods, error: mErr } = await db
     .from('modules')
     .upsert(
-      data.modules.map((m) => ({ ordem: m.ordem, titulo: m.titulo, publicado: true })),
-      { onConflict: 'ordem' },
+      data.modules.map((m) => ({
+        area_id: areaId,
+        ordem: m.ordem,
+        titulo: m.titulo,
+        publicado: true,
+      })),
+      { onConflict: 'area_id,ordem' },
     )
     .select('id, ordem')
   if (mErr) throw mErr
