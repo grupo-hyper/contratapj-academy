@@ -174,8 +174,10 @@ export function AppSidebar({
             <div className="truncate text-sm font-medium text-cpj-white">
               {userName}
             </div>
-            {role && (
-              <div className="text-xs capitalize text-cpj-white/50">{role}</div>
+            {(isAdmin || role) && (
+              <div className="text-xs capitalize text-cpj-white/50">
+                {isAdmin ? 'Admin' : role}
+              </div>
             )}
           </div>
         </div>
