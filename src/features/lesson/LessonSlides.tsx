@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { LessonMarkdown } from './lessonMarkdown'
-import { splitIntoSlides } from './lessonSlides'
+import { splitIntoSlides } from './splitIntoSlides'
 
 /** Segundos de bloqueio do "Próximo" a cada slide. */
 export const SLIDE_UNLOCK_SECONDS = 5

@@ -3,7 +3,7 @@
  * fallback sem seção e conteúdo vazio.
  */
 import { describe, expect, it } from 'vitest'
-import { splitIntoSlides } from './lessonSlides'
+import { splitIntoSlides } from './splitIntoSlides'
 
 describe('splitIntoSlides', () => {
   it('divide por seção ## e mantém o heading junto do conteúdo', () => {
