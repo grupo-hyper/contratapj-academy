@@ -1,5 +1,5 @@
 /**
- * HomePage — dashboard do aluno (Task 3.2), estilo streaming dark.
+ * HomePage - dashboard do aluno (Task 3.2), estilo streaming dark.
  *
  * Composição pura: toda a busca/derivação vive em `useHomeData`; aqui só
  * montamos os componentes presentational (Hero, Row, Tile) a partir do estado
@@ -11,7 +11,7 @@
  *    não-concluída do módulo `current` (da trilha travada). Se tudo estiver
  *    concluído, mostra variante de conclusão da trilha.
  *  - Row "Sua trilha": os módulos como Tiles no estado done/current/locked
- *    (a "cadeia" da trilha — metas reais são Fase 5, não existem aqui).
+ *    (a "cadeia" da trilha - metas reais são Fase 5, não existem aqui).
  *  - Row "Aulas do módulo atual": aulas do módulo current; concluídas = done,
  *    a próxima = current, as demais também acionáveis (nunca locked dentro de
  *    um módulo liberado).
@@ -44,7 +44,7 @@ function findCurrentModule(data: HomeData): Module | undefined {
 
 /**
  * true quando o módulo já teve TODAS as aulas publicadas concluídas mas o quiz
- * ainda não foi aprovado — ou seja, o único passo que falta é fazer o teste.
+ * ainda não foi aprovado - ou seja, o único passo que falta é fazer o teste.
  * (Um módulo `current` nesse estado ficou travado pelo seam de quiz.)
  */
 function needsQuiz(module: Module, data: HomeData): boolean {
@@ -104,7 +104,7 @@ export function HomePage({ areaId }: HomePageProps = {}) {
   const navigate = useNavigate()
 
   const profileId = profile?.id ?? user?.id
-  // Admin (allowlist): destrava a trilha inteira para ter a VISÃO TOTAL do app —
+  // Admin (allowlist): destrava a trilha inteira para ter a VISÃO TOTAL do app -
   // nenhum módulo fica `locked`, independentemente do progresso. É só UI; os
   // dados seguem protegidos por RLS no Supabase.
   const unlockAll = isAdminEmail(user?.email)
@@ -142,10 +142,30 @@ export function HomePage({ areaId }: HomePageProps = {}) {
     return map
   }, [data])
 
+  // Painel de stats: SO dados reais da trilha (sem streak/sequencia, que nao
+  // existe em useHomeData). Modulos concluidos, progresso geral e total de
+  // aulas concluidas.
+  const stats = useMemo(() => {
+    if (!data) return undefined
+    let totalPublished = 0
+    let totalDone = 0
+    let modulesDone = 0
+    for (const m of data.modules) {
+      const published = (data.lessonsByModule[m.id] ?? []).filter((l) => l.publicado)
+      const done = published.filter((l) => data.concludedLessonIds.has(l.id)).length
+      totalPublished += published.length
+      totalDone += done
+      if (published.length > 0 && done === published.length) modulesDone += 1
+    }
+    const overallPct =
+      totalPublished === 0 ? 0 : Math.round((totalDone / totalPublished) * 100)
+    return { totalModules: data.modules.length, modulesDone, totalDone, overallPct }
+  }, [data])
+
   const showLoading = loading || isLoading
 
   return (
-    <main className="ocean-bg min-h-screen text-cpj-white">
+    <main className="en-main">
       {showLoading ? (
         <HomeSkeleton />
       ) : isError || !data ? (
@@ -160,7 +180,7 @@ export function HomePage({ areaId }: HomePageProps = {}) {
           <p className="text-lg font-semibold text-cpj-white">
             Nenhum módulo publicado ainda.
           </p>
-          <p className="mt-2 text-sm">Volte em breve — o conteúdo está a caminho.</p>
+          <p className="mt-2 text-sm">Volte em breve - o conteúdo está a caminho.</p>
         </div>
       ) : (
         <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-6">
@@ -168,7 +188,7 @@ export function HomePage({ areaId }: HomePageProps = {}) {
           {heroModel && heroModel.complete ? (
             <Hero
               title="Você concluiu a trilha! 🎉"
-              subtitle="Parabéns — todos os módulos foram concluídos. Revise quando quiser."
+              subtitle="Parabéns - todos os módulos foram concluídos. Revise quando quiser."
               actionLabel="Revisar do início"
               onAction={() => {
                 const first = data.modules[0]
@@ -195,7 +215,28 @@ export function HomePage({ areaId }: HomePageProps = {}) {
             />
           ) : null}
 
-          {/* Row "Sua trilha" — os módulos como cadeia (done/current/locked) */}
+          {/* Painel de stats (dados reais da trilha) */}
+          {stats && (
+            <div className="en-hero-stats" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+              <div className="en-stat cool">
+                <b>
+                  {stats.modulesDone}
+                  <small>/{stats.totalModules}</small>
+                </b>
+                <span>Módulos concluídos</span>
+              </div>
+              <div className="en-stat">
+                <b>{stats.overallPct}%</b>
+                <span>Progresso da trilha</span>
+              </div>
+              <div className="en-stat hot">
+                <b>{stats.totalDone}</b>
+                <span>Aulas concluídas</span>
+              </div>
+            </div>
+          )}
+
+          {/* Row "Sua trilha" - os módulos como cadeia (done/current/locked) */}
           <Row title="Sua trilha">
             {data.modules.map((m) => {
               const unlock = data.unlockState[m.id]

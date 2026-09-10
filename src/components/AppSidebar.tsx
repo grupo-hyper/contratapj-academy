@@ -1,13 +1,12 @@
 /**
- * AppSidebar — menu lateral (dark / streaming), presentational.
+ * AppSidebar - menu lateral (Editorial Noir), presentational.
  *
- * Substitui a antiga TopNav como navegação global: wordmark no topo, links de
- * navegação (com estado ativo via NavLink) no meio, e o rodapé do usuário
- * (avatar + nome + papel + Sair) embaixo. Sem estado próprio — quem decide se é
- * o painel fixo do desktop ou o drawer do mobile é o <AppLayout>.
+ * Wordmark no topo, links de navegacao (estado ativo via NavLink) no meio, e o
+ * rodape do usuario (avatar + nome + papel + Sair) embaixo. Sem estado proprio:
+ * quem decide se e painel fixo (desktop) ou drawer (mobile) e o <AppLayout>.
  *
- * `onNavigate` é chamado ao clicar num link: o AppLayout usa isso para fechar o
- * drawer no mobile. No desktop é no-op.
+ * `onNavigate` e chamado ao clicar num link: o AppLayout usa isso para fechar o
+ * drawer no mobile. No desktop e no-op.
  */
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -20,9 +19,9 @@ interface AppSidebarProps {
   /** Chamado ao clicar num link (mobile: fecha o drawer). */
   onNavigate?: () => void
   /**
-   * Admin (allowlist): enxerga TODOS os links de navegação, independentemente
-   * do papel — para inspecionar as visões Aluno/Gestão/Conteúdo a partir do
-   * próprio login. É só UI; RLS protege os dados.
+   * Admin (allowlist): enxerga TODOS os links, independentemente do papel,
+   * para inspecionar as visoes Aluno/Gestao/Conteudo. E so UI; RLS protege os
+   * dados.
    */
   isAdmin?: boolean
 }
@@ -31,25 +30,18 @@ interface NavItem {
   to: string
   label: string
   icon: ReactNode
-  /** Match exato (para a raiz `/`, senão casaria com tudo). */
+  /** Match exato (para a raiz `/`, senao casaria com tudo). */
   end?: boolean
-  /** Papéis que enxergam o item; ausente = todos os autenticados. */
+  /** Papeis que enxergam o item; ausente = todos os autenticados. */
   roles?: Role[]
 }
 
-/* Ícones inline (sem dependência): traço fino, herdam `currentColor`. */
 const iconClass = 'h-5 w-5 shrink-0'
 
 function HomeIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M3 10.5 12 4l9 6.5M5 9.5V20h5v-6h4v6h5V9.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -57,8 +49,9 @@ function HomeIcon() {
 function TargetIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.7" />
-      <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4.4" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" />
     </svg>
   )
 }
@@ -66,14 +59,8 @@ function TargetIcon() {
 function CertIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="9" r="5" stroke="currentColor" strokeWidth="1.7" />
-      <path
-        d="m9 13-1.5 7L12 18l4.5 2L15 13"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <circle cx="12" cy="9.5" r="5.3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m8.6 13.8-1.8 6 5.2-2.6 5.2 2.6-1.8-6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -81,13 +68,8 @@ function CertIcon() {
 function GearIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
-      <path
-        d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
@@ -95,13 +77,7 @@ function GearIcon() {
 function PenIcon() {
   return (
     <svg className={iconClass} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 20h4L18.5 9.5a2 2 0 0 0-2.8-2.8L5 17.2 4 20Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.8-2.8L5 17.2 4 20Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -127,33 +103,28 @@ export function AppSidebar({
   )
 
   return (
-    <aside className="ocean-glass flex h-dvh w-64 shrink-0 flex-col border-r border-cpj-white/10">
-      {/* Logo (marca oficial, versão branca para fundo escuro) */}
-      <div className="flex h-16 items-center px-5">
-        <img
-          src="/logo-contratapj.png"
-          alt="ContrataPJ Academy"
-          className="h-7 w-auto"
-        />
+    <aside className="en-side" aria-label="Navegação principal">
+      <div className="en-brand" role="img" aria-label="ContrataPJ Academy">
+        <span className="en-brandmark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M17.5 7.2A6.4 6.4 0 1 0 17.6 16.9" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="18.6" cy="12" r="2.1" fill="#DE5968" />
+          </svg>
+        </span>
+        <div className="en-brandname">
+          ContrataPJ<em>Academy</em>
+        </div>
       </div>
 
-      {/* Navegação */}
-      <nav aria-label="Navegação principal" className="flex-1 space-y-1 px-3 py-2">
+      <nav className="en-nav" aria-label="Seções">
+        <span className="en-navlabel">Menu</span>
         {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
             onClick={onNavigate}
-            className={({ isActive }) =>
-              [
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal',
-                isActive
-                  ? 'bg-cpj-royal/25 text-cpj-white'
-                  : 'text-cpj-white/70 hover:bg-cpj-white/10 hover:text-cpj-white',
-              ].join(' ')
-            }
+            className={({ isActive }) => (isActive ? 'en-active' : undefined)}
           >
             {item.icon}
             <span>{item.label}</span>
@@ -161,32 +132,21 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {/* Rodapé do usuário */}
-      <div className="border-t border-cpj-royal/15 p-3">
-        <div className="flex items-center gap-3 px-2 py-1">
-          <span
-            aria-hidden="true"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cpj-royal text-sm font-semibold text-cpj-white"
-          >
+      <div className="en-sidefoot">
+        <div className="en-user">
+          <span className="en-avatar" aria-hidden="true">
             {initial}
           </span>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-medium text-cpj-white">
-              {userName}
-            </div>
-            {(isAdmin || role) && (
-              <div className="text-xs capitalize text-cpj-white/50">
-                {isAdmin ? 'Admin' : role}
-              </div>
-            )}
+          <div>
+            <b>{userName}</b>
+            {(isAdmin || role) && <span>{isAdmin ? 'Admin' : role}</span>}
           </div>
         </div>
         {onSignOut && (
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-cpj-white/70 transition hover:bg-cpj-white/10 hover:text-cpj-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-royal"
-          >
+          <button type="button" className="en-logout" onClick={onSignOut}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M15 8l4 4-4 4M19 12H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             Sair
           </button>
         )}

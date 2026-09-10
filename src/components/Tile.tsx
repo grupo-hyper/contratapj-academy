@@ -1,11 +1,11 @@
 /**
- * Tile — card de módulo/aula dentro de uma Row horizontal (dark / streaming).
- * Presentational e prop-driven: sem fetch, sem rota. Ação via `onClick`.
+ * Tile - card de modulo/aula dentro de uma Row horizontal (Editorial Noir).
+ * Presentational e prop-driven: sem fetch, sem rota. Acao via `onClick`.
  *
- * Três estados visuais:
- *  - done    → concluído (acento royal + check)
- *  - current → ativo/próximo (acento coral, mais destacado, claramente clicável)
- *  - locked  → bloqueado (dessaturado, cadeado, não-acionável)
+ * Tres estados visuais:
+ *  - done    -> concluido (selo royal + check)
+ *  - current -> ativo/proximo (selo coral pulsante, halo coral, clicavel)
+ *  - locked  -> bloqueado (veu + cadeado, capa dessaturada, nao-acionavel)
  */
 import { CourseGlyph } from './CourseGlyph'
 import { ProgressBar } from './ProgressBar'
@@ -18,50 +18,40 @@ interface TileProps {
   subtitle?: string
   coverUrl?: string
   /**
-   * Ordem do módulo (1–12) para a ilustração esculpida no placeholder quando
-   * não há `coverUrl`. Omitido → placeholder oceânico liso (aulas, p.ex.).
+   * Ordem do modulo (1 a 12) para a capa esculpida quando nao ha `coverUrl`.
+   * Omitido -> placeholder liso (aulas, por exemplo).
    */
   glyphOrder?: number
-  /** Progresso 0–100. Só renderiza a barra quando informado. */
+  /** Progresso 0 a 100. So renderiza a barra quando informado. */
   progressPct?: number
-  /** Ignorado no estado locked (tile não é acionável). */
+  /** Ignorado no estado locked (tile nao e acionavel). */
   onClick?: () => void
 }
 
 const CheckIcon = () => (
-  <svg
-    viewBox="0 0 20 20"
-    fill="currentColor"
-    aria-hidden="true"
-    className="h-3.5 w-3.5"
-  >
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="10" height="10">
     <path
-      fillRule="evenodd"
-      d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.1 3.1 6.8-6.8a1 1 0 0 1 1.4 0Z"
-      clipRule="evenodd"
+      d="m4.5 12.5 5 5 10-11"
+      stroke="currentColor"
+      strokeWidth="3.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 )
 
 const LockIcon = () => (
-  <svg
-    viewBox="0 0 20 20"
-    fill="currentColor"
-    aria-hidden="true"
-    className="h-3.5 w-3.5"
-  >
-    <path
-      fillRule="evenodd"
-      d="M10 1a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 6V5a2 2 0 1 0-4 0v2h4Z"
-      clipRule="evenodd"
-    />
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18">
+    <rect x="5" y="10.5" width="14" height="9.5" rx="2.5" stroke="#aab2d8" strokeWidth="2" />
+    <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#aab2d8" strokeWidth="2" />
+    <circle cx="12" cy="15.4" r="1.6" fill="#aab2d8" />
   </svg>
 )
 
-const stateRing: Record<TileState, string> = {
-  done: 'ring-1 ring-cpj-white/25',
-  current: 'ring-2 ring-cpj-royal',
-  locked: 'ring-1 ring-cpj-white/10',
+const stateClass: Record<TileState, string> = {
+  done: 'is-done',
+  current: 'is-now',
+  locked: 'is-locked',
 }
 
 export function Tile({
@@ -81,64 +71,58 @@ export function Tile({
       onClick={locked ? undefined : onClick}
       aria-disabled={locked || undefined}
       tabIndex={0}
-      className={[
-        'group ocean-glass relative flex w-40 shrink-0 flex-col overflow-hidden rounded-xl text-left transition-transform duration-200 ease-out sm:w-48',
-        stateRing[state],
-        locked
-          ? 'cursor-not-allowed opacity-50'
-          : 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_34px_-8px_rgb(0_0_0_/_0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cpj-white/40',
-      ].join(' ')}
+      className={['en-card', stateClass[state]].join(' ')}
     >
-      {/* Capa */}
-      <div className="relative aspect-video w-full overflow-hidden bg-cpj-navy/60">
+      <div className="en-covwrap">
         {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={coverUrl} alt="" className="en-cov" loading="lazy" />
         ) : glyphOrder !== undefined ? (
-          // Ilustração esculpida do módulo (direção Blue Ocean).
           <CourseGlyph order={glyphOrder} />
         ) : (
-          // Placeholder "oceânico" liso: degradê marinho + glow radial central.
-          <div className="relative h-full w-full bg-gradient-to-br from-cpj-navy via-cpj-navy/60 to-cpj-bg">
-            <div className="absolute inset-0 bg-[radial-gradient(70%_70%_at_50%_35%,rgb(66_89_223_/_0.35),transparent_70%)]" />
-          </div>
+          <div
+            className="en-cov"
+            style={{
+              background:
+                'linear-gradient(140deg, #131b4d, #0a0f30 55%, #04061a)',
+            }}
+          />
         )}
 
-        {/* Selo de estado (canto superior) */}
         {state === 'done' && (
-          <span
-            aria-label="Concluído"
-            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-cpj-white/20 bg-black/60 text-cpj-white"
-          >
+          <span className="en-badge done" aria-label="Concluído">
             <CheckIcon />
+            Concluído
+          </span>
+        )}
+        {state === 'current' && (
+          <span className="en-badge now" aria-label="Em andamento">
+            <i aria-hidden="true" />
+            Em andamento
           </span>
         )}
         {locked && (
-          <span
-            aria-label="Bloqueado"
-            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-cpj-bg/80 text-cpj-white/80"
-          >
-            <LockIcon />
-          </span>
+          <>
+            <span className="en-badge lock" aria-label="Bloqueado">
+              Bloqueado
+            </span>
+            <div className="en-lockveil" aria-hidden="true">
+              <span className="en-lockchip">
+                <LockIcon />
+              </span>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Corpo */}
-      <div className="flex flex-1 flex-col gap-1 p-3">
+      <div className="en-card-meta">
         {subtitle && (
-          <span className="text-[0.7rem] font-medium uppercase tracking-wide text-cpj-white/50">
-            {subtitle}
-          </span>
+          <div className="en-cm-top">
+            <span className="en-cm-num">{subtitle}</span>
+          </div>
         )}
-        <span className="line-clamp-2 text-sm font-semibold text-cpj-white">
-          {title}
-        </span>
+        <div className="en-cm-title">{title}</div>
         {progressPct !== undefined && (
-          <div className="mt-auto pt-2">
+          <div style={{ marginTop: 10 }}>
             <ProgressBar value={progressPct} />
           </div>
         )}

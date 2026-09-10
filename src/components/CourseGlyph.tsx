@@ -1,183 +1,50 @@
 /**
- * CourseGlyph — ilustração "esculpida" por módulo (direção Blue Ocean).
+ * CourseGlyph - capa "esculpida" por modulo (direcao Editorial Noir).
  *
- * Presentational e offline: um glyph vetorial temático por módulo dentro de um
- * medalhão glass com glow radial + rim de luz + sombra interna, dando o efeito
- * 3D-ish monocromático azul da referência SEM assets raster (bom p/ PWA e sync).
+ * Apresentacional e offline: uma capa gerada por SVG para cada modulo, com
+ * fundo noturno em gradiente, glow radial, numeral fantasma e um glyph
+ * esculpido em camadas (base escura deslocada + traco em gradiente + acento
+ * coral). Os gradientes/patterns/filtros vivem em <SvgDefs/> (montado no
+ * shell), referenciados aqui via url(#id).
  *
- * O glyph é escolhido por `order` (1–12, a `ordem` do módulo — títulos fixos em
- * MODULE_TITLES do seed). Fora do intervalo cai no glyph genérico (bússola).
- * Puro SVG com stroke em gradiente royal→branco; a marca não muda.
+ * O glyph e escolhido por `order` (1 a 12). Fora do intervalo cai no glyph
+ * generico. A capa e decorativa: aria-hidden, pois o nome acessivel do card
+ * vem do proprio Tile (aria-label do botao).
  */
-import type { ReactNode } from 'react'
 
-/**
- * Glyphs desenhados à mão em viewBox 24×24, stroke 1.75, cantos/juntas
- * arredondados — linguagem visual única entre todos os módulos.
- *  1 Prospecção · 2 Abordagem · 3 Diagnóstico · 4 Proposta · 5 Objeções
- *  6 Fechamento · 7 Follow-up · 8 Gestão · 9 Frameworks · 10 Scripts
- *  11 Antipadrões · 12 Números
- */
-const GLYPHS: Record<number, ReactNode> = {
-  // Prospecção — radar/alvo
-  1: (
-    <>
-      <circle cx="12" cy="12" r="8.5" />
-      <circle cx="12" cy="12" r="4.5" />
-      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-      <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" />
-    </>
-  ),
-  // Abordagem — balão de conversa
-  2: (
-    <>
-      <path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V16.5H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z" />
-      <path d="M7 10h10M7 13h6" />
-    </>
-  ),
-  // Diagnóstico — lupa
-  3: (
-    <>
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="M15.2 15.2 21 21" />
-      <path d="M8 10.5h5M10.5 8v5" />
-    </>
-  ),
-  // Proposta — documento com dobra
-  4: (
-    <>
-      <path d="M6 2.5h7l5 5V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5Z" />
-      <path d="M13 2.5V8h5" />
-      <path d="M8 13h8M8 16.5h5" />
-    </>
-  ),
-  // Objeções — escudo
-  5: (
-    <>
-      <path d="M12 2.5 20 5.5v6c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10v-6Z" />
-      <path d="m8.8 12 2.2 2.2 4.2-4.4" />
-    </>
-  ),
-  // Fechamento — selo com check
-  6: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8 12 2.8 2.8L16 9" />
-    </>
-  ),
-  // Follow-up — relógio com seta de retorno
-  7: (
-    <>
-      <circle cx="12" cy="12.5" r="7.5" />
-      <path d="M12 8.5v4l2.5 2" />
-      <path d="M5 4.5v3.5h3.5" />
-    </>
-  ),
-  // Gestão — sliders
-  8: (
-    <>
-      <path d="M4 7h16M4 12h16M4 17h16" />
-      <circle cx="9" cy="7" r="2" fill="#0a0a0c" />
-      <circle cx="15" cy="12" r="2" fill="#0a0a0c" />
-      <circle cx="8" cy="17" r="2" fill="#0a0a0c" />
-    </>
-  ),
-  // Frameworks — camadas
-  9: (
-    <>
-      <path d="M12 3 21 8l-9 5-9-5Z" />
-      <path d="m3 12.5 9 5 9-5" />
-      <path d="m3 16.5 9 5 9-5" />
-    </>
-  ),
-  // Scripts — balão com </>
-  10: (
-    <>
-      <path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V16.5H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z" />
-      <path d="m10 9-2.5 2.5L10 14M14 9l2.5 2.5L14 14" />
-    </>
-  ),
-  // Antipadrões — triângulo de alerta
-  11: (
-    <>
-      <path d="M12 3.5 22 20H2Z" />
-      <path d="M12 9.5v4.5" />
-      <path d="M12 17h.01" />
-    </>
-  ),
-  // Números — gráfico de barras
-  12: (
-    <>
-      <path d="M4 20.5V21h16" />
-      <path d="M7 20V11M12 20V5M17 20v-6" />
-    </>
-  ),
+const GENERIC = `<rect width="320" height="180" fill="url(#bgR1)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="272" cy="10" r="140" fill="url(#glowR)" opacity=".6"/><g transform="translate(160,90)" filter="url(#fD)"><circle r="34" fill="rgba(10,14,40,.85)" stroke="url(#gA)" stroke-width="7"/><path d="M0-22 8 0 0 22-8 0Z" fill="url(#gB)" filter="url(#fGlowC)"/><circle r="4" fill="#fff"/></g>`
+
+const COVERS: Record<number, string> = {
+  1: `<rect width="320" height="180" fill="url(#bgR1)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="272" cy="10" r="140" fill="url(#glowR)" opacity=".7"/><text class="en-ghost" x="306" y="164">01</text><text class="en-ghost2" x="306" y="164">01</text><g transform="translate(96,90)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".55"><path d="M-46 0a46 46 0 0 1 92 0" fill="none" stroke="#04061a" stroke-width="8"/><path d="M-28 0a28 28 0 0 1 56 0" fill="none" stroke="#04061a" stroke-width="8"/></g><path d="M-46 0a46 46 0 0 1 92 0" fill="none" stroke="url(#gA)" stroke-width="7" stroke-linecap="round"/><path d="M-28 0a28 28 0 0 1 56 0" fill="none" stroke="url(#gA)" stroke-width="7" stroke-linecap="round" opacity=".7"/><line x1="0" y1="0" x2="34" y2="-34" stroke="url(#gC)" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="0" r="9" fill="url(#gB)" filter="url(#fGlowC)"/><circle cx="0" cy="0" r="3.4" fill="#fff"/></g>`,
+  2: `<rect width="320" height="180" fill="url(#bgM1)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="50" cy="170" r="150" fill="url(#glowR)" opacity=".6"/><circle cx="300" cy="20" r="110" fill="url(#glowC)" opacity=".45"/><text class="en-ghost" x="306" y="164">02</text><text class="en-ghost2" x="306" y="164">02</text><g transform="translate(98,92)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".55"><path d="M-44-36h66a12 12 0 0 1 12 12v30a12 12 0 0 1-12 12H-8l-18 20-4-20h-14a12 12 0 0 1-12-12v-30a12 12 0 0 1 12-12Z" fill="#04061a"/></g><path d="M-44-36h66a12 12 0 0 1 12 12v30a12 12 0 0 1-12 12H-8l-18 20-4-20h-14a12 12 0 0 1-12-12v-30a12 12 0 0 1 12-12Z" fill="rgba(10,14,40,.92)" stroke="url(#gA)" stroke-width="5.5" stroke-linejoin="round"/><path d="m18-44 5 12 12 5-12 5-5 12-5-12-12-5 12-5 5-12Z" fill="url(#gB)" transform="translate(30,-8)" filter="url(#fGlowC)"/><line x1="-28" y1="-14" x2="14" y2="-14" stroke="url(#gC)" stroke-width="5" stroke-linecap="round"/><line x1="-28" y1="0" x2="0" y2="0" stroke="url(#gC)" stroke-width="5" stroke-linecap="round" opacity=".6"/></g>`,
+  3: `<rect width="320" height="180" fill="url(#bgR2)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="160" cy="200" r="160" fill="url(#glowR)" opacity=".55"/><text class="en-ghost" x="306" y="164">03</text><text class="en-ghost2" x="306" y="164">03</text><g transform="translate(98,90)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".5"><circle cx="-8" cy="-8" r="34" fill="none" stroke="#04061a" stroke-width="9"/></g><circle cx="-8" cy="-8" r="34" fill="rgba(10,14,40,.85)" stroke="url(#gA)" stroke-width="7"/><circle cx="-8" cy="-8" r="19" fill="none" stroke="url(#gC)" stroke-width="3" opacity=".7"/><line x1="17" y1="17" x2="44" y2="44" stroke="url(#gB)" stroke-width="10" stroke-linecap="round" filter="url(#fGlowC)"/><path d="M-22-10c4-9 14-14 24-11" stroke="#f4f6ff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/></g>`,
+  4: `<rect width="320" height="180" fill="url(#bgM1)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="290" cy="160" r="130" fill="url(#glowC)" opacity=".5"/><text class="en-ghost" x="306" y="164">04</text><text class="en-ghost2" x="306" y="164">04</text><g transform="translate(96,92)" filter="url(#fD)"><g transform="translate(4,7)" opacity=".55"><rect x="-34" y="-46" width="64" height="86" rx="10" fill="#04061a" transform="rotate(-6)"/></g><rect x="-34" y="-46" width="64" height="86" rx="10" fill="rgba(10,14,40,.92)" stroke="url(#gA)" stroke-width="5.5" transform="rotate(-6)"/><g transform="rotate(-6)"><line x1="-20" y1="-26" x2="16" y2="-26" stroke="url(#gC)" stroke-width="4.5" stroke-linecap="round"/><line x1="-20" y1="-12" x2="8" y2="-12" stroke="url(#gC)" stroke-width="4.5" stroke-linecap="round" opacity=".6"/><line x1="-20" y1="2" x2="12" y2="2" stroke="url(#gC)" stroke-width="4.5" stroke-linecap="round" opacity=".4"/></g><circle cx="30" cy="26" r="20" fill="url(#gB)" filter="url(#fGlowC)"/><text x="30" y="33" text-anchor="middle" font-family="Outfit,'Segoe UI',system-ui,sans-serif" font-weight="800" font-size="21" fill="#1a0b0e">$</text></g>`,
+  5: `<rect width="320" height="180" fill="url(#bgC2)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="250" cy="0" r="160" fill="url(#glowC)" opacity=".75"/><circle cx="30" cy="190" r="130" fill="url(#glowR)" opacity=".5"/><text class="en-ghost" x="306" y="164">05</text><text class="en-ghost2" x="306" y="164">05</text><g transform="translate(100,92)" filter="url(#fD)"><g transform="translate(3,7)" opacity=".55"><path d="M0-52 40-36v32C40 18 22 42 0 54-22 42-40 18-40-4v-32Z" fill="#160408"/></g><path d="M0-52 40-36v32C40 18 22 42 0 54-22 42-40 18-40-4v-32Z" fill="rgba(26,8,14,.92)" stroke="url(#gB)" stroke-width="6" stroke-linejoin="round" filter="url(#fGlowC)"/><path d="M0-36 26-25v22C26 12 14 28 0 37-14 28-26 12-26-3v-22Z" fill="none" stroke="url(#gA)" stroke-width="3.5" stroke-linejoin="round" opacity=".85"/><path d="M-11-2 -3 7 14-13" fill="none" stroke="#f4f6ff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></g>`,
+  6: `<rect width="320" height="180" fill="url(#bgC1)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="290" cy="170" r="140" fill="url(#glowC)" opacity=".55"/><text class="en-ghost" x="306" y="164">06</text><text class="en-ghost2" x="306" y="164">06</text><g transform="translate(96,90)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".5"><circle cx="-14" cy="-10" r="26" fill="none" stroke="#04061a" stroke-width="9"/></g><circle cx="-14" cy="-10" r="26" fill="rgba(10,14,40,.9)" stroke="url(#gB)" stroke-width="7"/><circle cx="-14" cy="-10" r="10" fill="none" stroke="url(#gC)" stroke-width="3.5"/><path d="M6 8 44 44M30 32l10-9M40 42l9-9" stroke="url(#gA)" stroke-width="8" stroke-linecap="round"/></g>`,
+  7: `<rect width="320" height="180" fill="url(#bgR1)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="40" cy="0" r="130" fill="url(#glowR)" opacity=".6"/><text class="en-ghost" x="306" y="164">07</text><text class="en-ghost2" x="306" y="164">07</text><g transform="translate(98,90)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".5"><path d="M34 -20a40 40 0 1 0 8 24" fill="none" stroke="#04061a" stroke-width="9"/></g><path d="M34 -20a40 40 0 1 0 8 24" fill="none" stroke="url(#gA)" stroke-width="8" stroke-linecap="round"/><path d="M28-38 46-16 18-10Z" fill="url(#gB)" filter="url(#fGlowC)"/><circle cx="0" cy="2" r="6" fill="url(#gC)"/></g>`,
+  8: `<rect width="320" height="180" fill="url(#bgR2)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="160" cy="-20" r="140" fill="url(#glowR)" opacity=".55"/><text class="en-ghost" x="306" y="164">08</text><text class="en-ghost2" x="306" y="164">08</text><g transform="translate(94,96)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".5"><rect x="-44" y="-6" width="18" height="48" rx="5" fill="#04061a"/><rect x="-14" y="-28" width="18" height="70" rx="5" fill="#04061a"/><rect x="16" y="-50" width="18" height="92" rx="5" fill="#04061a"/></g><rect x="-44" y="-6" width="18" height="48" rx="5" fill="rgba(10,14,40,.9)" stroke="url(#gA)" stroke-width="4"/><rect x="-14" y="-28" width="18" height="70" rx="5" fill="rgba(10,14,40,.9)" stroke="url(#gA)" stroke-width="4"/><rect x="16" y="-50" width="18" height="92" rx="5" fill="url(#gB)" filter="url(#fGlowC)"/><path d="M-35-24 -5-42 25-58" fill="none" stroke="url(#gC)" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 10"/></g>`,
+  9: `<rect width="320" height="180" fill="url(#bgM1)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="300" cy="90" r="130" fill="url(#glowR)" opacity=".55"/><text class="en-ghost" x="306" y="164">09</text><text class="en-ghost2" x="306" y="164">09</text><g transform="translate(96,90)" filter="url(#fD)"><path d="M-36-36 0-52l36 16M-36-36v40L0 22l36-18v-40M-36-36 0-20l36-16M0-20v42" fill="none" stroke="url(#gA)" stroke-width="5" stroke-linejoin="round"/><circle cx="-36" cy="-36" r="8" fill="rgba(10,14,40,.95)" stroke="url(#gC)" stroke-width="3.5"/><circle cx="36" cy="-36" r="8" fill="rgba(10,14,40,.95)" stroke="url(#gC)" stroke-width="3.5"/><circle cx="0" cy="-52" r="9" fill="url(#gB)" filter="url(#fGlowC)"/><circle cx="0" cy="22" r="8" fill="rgba(10,14,40,.95)" stroke="url(#gC)" stroke-width="3.5"/></g>`,
+  10: `<rect width="320" height="180" fill="url(#bgC1)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="20" cy="160" r="140" fill="url(#glowC)" opacity=".5"/><text class="en-ghost" x="306" y="164">10</text><text class="en-ghost2" x="306" y="164">10</text><g transform="translate(96,96)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".5"><path d="M-40-40h26v26h-26c0 22 8 34 26 40-32 0-48-18-48-44 0-13 9-22 22-22Z" fill="#04061a"/></g><path d="M-40-40h26v26h-26c0 22 8 34 26 40-32 0-48-18-48-44 0-13 9-22 22-22Z" fill="rgba(26,8,14,.9)" stroke="url(#gB)" stroke-width="5" stroke-linejoin="round"/><path d="M22-40h26v26H22c0 22 8 34 26 40-32 0-48-18-48-44 0-13 9-22 22-22Z" fill="rgba(10,14,40,.9)" stroke="url(#gA)" stroke-width="5" stroke-linejoin="round" transform="translate(24,0)"/></g>`,
+  11: `<rect width="320" height="180" fill="url(#bgC2)"/><rect width="320" height="180" fill="url(#hatch)"/><circle cx="280" cy="40" r="130" fill="url(#glowC)" opacity=".6"/><text class="en-ghost" x="306" y="164">11</text><text class="en-ghost2" x="306" y="164">11</text><g transform="translate(98,94)" filter="url(#fD)"><g transform="translate(3,6)" opacity=".55"><path d="M0-52 52 38h-104Z" fill="#160408"/></g><path d="M0-52 52 38h-104Z" fill="rgba(26,8,14,.92)" stroke="url(#gB)" stroke-width="6" stroke-linejoin="round" filter="url(#fGlowC)"/><path d="m-12-8 24 24m0-24-24 24" stroke="#f4f6ff" stroke-width="6" stroke-linecap="round"/><path d="M-30 30h60" stroke="url(#gA)" stroke-width="4" stroke-linecap="round" opacity=".6"/></g>`,
+  12: `<rect width="320" height="180" fill="url(#bgR1)"/><rect width="320" height="180" fill="url(#dots)"/><circle cx="60" cy="20" r="140" fill="url(#glowR)" opacity=".6"/><text class="en-ghost" x="306" y="164">12</text><text class="en-ghost2" x="306" y="164">12</text><g transform="translate(94,94)" filter="url(#fD)"><path d="M-46 34 -18 6l20 14 44-52" fill="none" stroke="url(#gA)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M20-32h26v26" fill="none" stroke="url(#gB)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#fGlowC)"/><circle cx="-18" cy="6" r="6" fill="url(#gC)"/><circle cx="2" cy="20" r="6" fill="url(#gC)"/><circle cx="-46" cy="34" r="6" fill="url(#gC)"/></g>`,
 }
 
-// Genérico (fallback) — bússola.
-const FALLBACK: ReactNode = (
-  <>
-    <circle cx="12" cy="12" r="9" />
-    <path d="m15.5 8.5-2 5-5 2 2-5Z" />
-  </>
-)
-
 interface CourseGlyphProps {
-  /** `ordem` do módulo (1–12). Fora do intervalo usa o glyph genérico. */
+  /** `ordem` do modulo (1 a 12). Fora do intervalo usa o glyph generico. */
   order: number
-  /** Classe extra para o wrapper (ex.: tamanho da medalha). */
   className?: string
 }
 
 export function CourseGlyph({ order, className }: CourseGlyphProps) {
-  const glyph = GLYPHS[order] ?? FALLBACK
-
+  const inner = COVERS[order] ?? GENERIC
+  const cls = ['en-cov', className].filter(Boolean).join(' ')
   return (
-    <div
-      className={[
-        'relative grid h-full w-full place-items-center overflow-hidden',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
+    <svg
+      viewBox="0 0 320 180"
+      className={cls}
       aria-hidden="true"
-    >
-      {/* Fundo oceânico do card */}
-      <div className="absolute inset-0 bg-gradient-to-br from-cpj-navy via-cpj-navy/60 to-cpj-bg" />
-      <div className="absolute inset-0 bg-[radial-gradient(70%_70%_at_50%_32%,rgb(66_89_223_/_0.38),transparent_70%)]" />
-
-      {/* Medalhão esculpido: rim de luz no topo + sombra interna embaixo + glow. */}
-      <div
-        className="relative flex aspect-square w-[42%] max-w-16 items-center justify-center rounded-2xl border border-cpj-white/15"
-        style={{
-          background:
-            'radial-gradient(120% 120% at 30% 18%, rgb(66 89 223 / 0.6), rgb(28 38 94 / 0.18))',
-          boxShadow:
-            'inset 0 1px 0 rgb(244 246 255 / 0.35), inset 0 -9px 16px rgb(10 10 12 / 0.6), 0 8px 22px -6px rgb(66 89 223 / 0.55)',
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          className="h-[58%] w-[58%]"
-          style={{ filter: 'drop-shadow(0 2px 4px rgb(10 10 12 / 0.65))' }}
-        >
-          <defs>
-            <linearGradient id="cpj-glyph" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#f4f6ff" />
-              <stop offset="1" stopColor="#8fa2ff" />
-            </linearGradient>
-          </defs>
-          <g
-            stroke="url(#cpj-glyph)"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {glyph}
-          </g>
-        </svg>
-      </div>
-    </div>
+      preserveAspectRatio="xMidYMid slice"
+      dangerouslySetInnerHTML={{ __html: inner }}
+    />
   )
 }

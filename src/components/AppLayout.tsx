@@ -1,5 +1,5 @@
 /**
- * AppLayout — shell da área autenticada (Task sidebar).
+ * AppLayout - shell da área autenticada (Task sidebar).
  *
  * Layout route (react-router): renderiza a <AppSidebar> à esquerda e o conteúdo
  * da rota no <Outlet>. A navegação global mora aqui (deixou de ser repetida em
@@ -8,7 +8,7 @@
  * Responsividade:
  *  - Desktop (md+): sidebar fixa no fluxo, sempre visível.
  *  - Mobile: sidebar vira drawer off-canvas, aberto por um botão hambúrguer
- *    flutuante (não há topbar — decisão de design). Clicar num link ou no
+ *    flutuante (não há topbar - decisão de design). Clicar num link ou no
  *    backdrop fecha o drawer.
  */
 import { useState } from 'react'
@@ -16,6 +16,7 @@ import { Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { isAdminEmail } from '../auth/admins'
 import { AppSidebar } from './AppSidebar'
+import { SvgDefs } from './SvgDefs'
 
 export function AppLayout() {
   const { profile, user, signOut } = useAuth()
@@ -26,9 +27,15 @@ export function AppLayout() {
   const isAdmin = isAdminEmail(user?.email)
 
   return (
-    <div className="ocean-bg flex min-h-dvh text-cpj-white">
+    <div className="enoir ocean-bg relative flex min-h-dvh text-cpj-white">
+      {/* Atmosfera Editorial Noir: luzes ambiente e grain, mais os defs SVG
+          compartilhados das capas. Decorativas e nao-interativas (z-0). */}
+      <SvgDefs />
+      <div className="en-stage" aria-hidden="true" />
+      <div className="en-grain" aria-hidden="true" />
+
       {/* Sidebar do desktop: parte do fluxo, sticky ao rolar. */}
-      <div className="sticky top-0 hidden h-dvh md:block">
+      <div className="relative z-10 sticky top-0 hidden h-dvh md:block">
         <AppSidebar
           userName={userName}
           role={role}
@@ -83,7 +90,7 @@ export function AppLayout() {
 
       {/* Conteúdo da rota. min-w-0 evita overflow de filhos flex; o pt no
           mobile reserva espaço para o botão hambúrguer flutuante. */}
-      <div className="min-w-0 flex-1 pt-14 md:pt-0">
+      <div className="relative z-10 min-w-0 flex-1 pt-14 md:pt-0">
         <Outlet />
       </div>
     </div>
