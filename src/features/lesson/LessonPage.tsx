@@ -12,6 +12,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { isAdminEmail } from '../../auth/admins'
 import { ProgressBar } from '../../components/ProgressBar'
 import { LessonSlides } from './LessonSlides'
 import { LessonVideo } from './LessonVideo'
@@ -43,6 +44,9 @@ export function LessonPage() {
   // Mesma resolução de id usada na Home, para a invalidação da query de
   // progresso casar EXATAMENTE com a chave `['lesson_progress', profileId]`.
   const profileId = profile?.id ?? user?.id
+  // Admin (allowlist): navegação livre nos slides — sem o bloqueio de 5s do
+  // "Próximo". Alunos seguem com o gate de tempo normal.
+  const isAdmin = isAdminEmail(user?.email)
 
   const {
     lesson,
@@ -116,6 +120,7 @@ export function LessonPage() {
 
           <LessonSlides
             markdown={stripSourcesSection(stripLeadingH1(lesson.texto_md))}
+            gated={!isAdmin}
             onLastSlideReached={marcarConteudoVisto}
           />
 
