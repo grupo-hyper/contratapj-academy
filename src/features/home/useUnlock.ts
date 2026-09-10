@@ -71,6 +71,16 @@ export interface ComputeUnlockInput {
    * ausência do mapa ou da chave => não bloqueia (ver doc no topo do arquivo).
    */
   quizPassedByModule?: Record<string, boolean>
+  /**
+   * BYPASS DE ADMIN (allowlist `isAdminEmail`). Quando `true`, a trilha inteira
+   * fica destravada: NENHUM módulo é `locked`, independentemente do progresso.
+   * Serve para o Head de Comercial / admins terem a VISÃO TOTAL do app a partir
+   * do próprio login (inspecionar qualquer módulo sem concluir os anteriores).
+   * O estado real de conclusão é preservado: um módulo já concluído aparece como
+   * `done`, os demais como `current` (acessíveis). É só UI — os dados seguem
+   * protegidos por RLS no Supabase. Default `false` = trilha sequencial normal.
+   */
+  unlockAll?: boolean
 }
 
 /**
@@ -104,7 +114,8 @@ function isModuleCompleted(
  * determinística: mesma entrada -> mesma saída, sem efeitos colaterais.
  */
 export function computeUnlockState(input: ComputeUnlockInput): UnlockStateMap {
-  const { modules, lessonsByModule, concludedLessonIds, quizPassedByModule } = input
+  const { modules, lessonsByModule, concludedLessonIds, quizPassedByModule, unlockAll } =
+    input
 
   // Ordena por `ordem` (não muta a entrada). O de menor ordem é sempre o 1º.
   // Desempate por `id` (localeCompare) como chave secundária: torna a ordenação
@@ -120,7 +131,9 @@ export function computeUnlockState(input: ComputeUnlockInput): UnlockStateMap {
   let prevDone = true
 
   for (const module of ordered) {
-    const unlocked: boolean = prevDone
+    // Admin (unlockAll): a trilha nunca trava — todo módulo é acessível. Fora
+    // isso, o módulo só libera se o anterior estiver `done` (regra sequencial).
+    const unlocked: boolean = unlockAll || prevDone
     const completed: boolean =
       unlocked &&
       isModuleCompleted(module, lessonsByModule, concludedLessonIds, quizPassedByModule)

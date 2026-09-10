@@ -217,4 +217,44 @@ describe('computeUnlockState — trilha sequencial travada', () => {
     expect(state.m1).toMatchObject({ state: 'done', completed: true })
     expect(state.m2).toMatchObject({ state: 'current', unlocked: true })
   })
+
+  it('(admin) unlockAll destrava TODOS os módulos — nenhum locked, sem progresso', () => {
+    const modules = [mod(1), mod(2), mod(3)]
+    const lessonsByModule = {
+      m1: [lesson('l1a', 'm1', 1)],
+      m2: [lesson('l2a', 'm2', 1)],
+      m3: [lesson('l3a', 'm3', 1)],
+    }
+    const state = computeUnlockState({
+      modules,
+      lessonsByModule,
+      concludedLessonIds: new Set(), // nada concluído
+      unlockAll: true,
+    })
+
+    // Sem unlockAll, m2 e m3 estariam locked. Com admin, todos acessíveis.
+    expect(state.m1).toMatchObject({ state: 'current', unlocked: true })
+    expect(state.m2).toMatchObject({ state: 'current', unlocked: true })
+    expect(state.m3).toMatchObject({ state: 'current', unlocked: true })
+  })
+
+  it('(admin) unlockAll preserva `done` de módulo concluído e destrava o resto', () => {
+    const modules = [mod(1), mod(2), mod(3)]
+    const lessonsByModule = {
+      m1: [lesson('l1a', 'm1', 1)],
+      m2: [lesson('l2a', 'm2', 1)],
+      m3: [lesson('l3a', 'm3', 1)],
+    }
+    const state = computeUnlockState({
+      modules,
+      lessonsByModule,
+      concludedLessonIds: new Set(['l3a']), // concluiu só o módulo 3 (fora de ordem)
+      unlockAll: true,
+    })
+
+    expect(state.m1).toMatchObject({ state: 'current', unlocked: true })
+    expect(state.m2).toMatchObject({ state: 'current', unlocked: true })
+    // Módulo 3 concluído aparece como done mesmo com os anteriores em aberto.
+    expect(state.m3).toMatchObject({ state: 'done', completed: true, unlocked: true })
+  })
 })

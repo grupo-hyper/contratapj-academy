@@ -186,6 +186,7 @@ export interface UseHomeDataResult {
 export function useHomeData(
   profileId: string | undefined,
   areaId?: string,
+  unlockAll?: boolean,
 ): UseHomeDataResult {
   // `modules`/`lessons` não dependem do usuário, mas são gated no mesmo `enabled`
   // que `progress` de propósito: espera a auth resolver antes de buscar, evitando
@@ -267,6 +268,7 @@ export function useHomeData(
       lessonsByModule,
       concludedLessonIds,
       quizPassedByModule,
+      unlockAll,
     })
     data = {
       modules,

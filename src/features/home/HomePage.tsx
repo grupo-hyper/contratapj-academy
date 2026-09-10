@@ -19,6 +19,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { isAdminEmail } from '../../auth/admins'
 import { Hero } from '../../components/Hero'
 import { Row } from '../../components/Row'
 import { Tile, type TileState } from '../../components/Tile'
@@ -103,7 +104,11 @@ export function HomePage({ areaId }: HomePageProps = {}) {
   const navigate = useNavigate()
 
   const profileId = profile?.id ?? user?.id
-  const { data, isLoading, isError } = useHomeData(profileId, areaId)
+  // Admin (allowlist): destrava a trilha inteira para ter a VISÃO TOTAL do app —
+  // nenhum módulo fica `locked`, independentemente do progresso. É só UI; os
+  // dados seguem protegidos por RLS no Supabase.
+  const unlockAll = isAdminEmail(user?.email)
+  const { data, isLoading, isError } = useHomeData(profileId, areaId, unlockAll)
 
   // Deriva os alvos do Hero a partir do estado da trilha.
   const heroModel = useMemo(() => {
