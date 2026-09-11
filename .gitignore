@@ -30,3 +30,8 @@ dist-ssr
 
 # Visual companion (brainstorming)
 .superpowers/
+
+# Claude Code / AI agents: per-developer settings.
+# Machine-specific paths and permission overrides. Never commit.
+.claude/settings.local.json
+CLAUDE.local.md
