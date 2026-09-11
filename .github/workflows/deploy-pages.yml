@@ -91,9 +91,9 @@ jobs:
           fi
 
           echo "Changed files:"
-          echo "$files" | sed 's/^/  /'
+          printf '%s\n' "$files" | sed 's/^/  /'
 
-          if echo "$files" | grep -qvE '\.md$'; then
+          if printf '%s\n' "$files" | grep -qvE '\.md$'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "::notice::Code changed -- deploying."
           else
@@ -104,7 +104,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: [changes]
-    if: needs.changes.outputs.code == 'true'
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     env:
       # Valores PÚBLICOS do cliente (o Vite os embute no bundle de qualquer forma).
       # A anon key é role=anon — os dados são protegidos por RLS, não por segredo.
@@ -136,7 +136,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [changes, build]
-    if: needs.changes.outputs.code == 'true'
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.build.result == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
