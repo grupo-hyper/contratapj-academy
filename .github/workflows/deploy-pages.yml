@@ -21,8 +21,90 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Did this push touch anything worth deploying?
+  #
+  # A commit that changes nothing but markdown cannot change what runs in
+  # production, so building and deploying one is waste -- and on repos that cut
+  # a release it is worse than waste, because a docs commit bumps a version and
+  # tags a release nobody shipped. Measured 2026-09-11: 9 production deploys in
+  # this org over 3.5 days were triggered by markdown-only commits.
+  #
+  # NOTE: `paths-ignore:` on the trigger is the wrong tool here. It would skip
+  # the whole workflow including the cleanup job that deletes the merged PR's
+  # source branch -- and a head branch left alive is what makes a stacked PR
+  # merge into a dead base and report success. The cleanup job stays ungated
+  # and tolerates a skipped deploy.
+  #
+  # Fails open to deploying: no range, an API error, or a truncated file list
+  # all mean code=true.
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Classify the pushed files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+
+          # A new branch or a force-push reports an all-zero `before`: there is
+          # no range to compare, so assume code.
+          case "$BEFORE" in
+            ""|0000000000000000000000000000000000000000)
+              echo "::warning::No previous SHA for this push. Treating as code."
+              echo "code=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          if ! payload=$(gh api "/repos/$REPO/compare/$BEFORE...$AFTER"); then
+            echo "::warning::Could not compare $BEFORE..$AFTER. Treating as code."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The compare endpoint caps `files` at 300. A truncated list cannot be
+          # judged -- the code could be in the part that was cut.
+          count=$(printf '%s' "$payload" | jq '.files | length')
+          if [ "$count" -ge 300 ]; then
+            echo "::warning::Compare returned $count files and may be truncated. Treating as code."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Renames report the new path in `filename` and the original in
+          # `previous_filename`; both are judged, so moving a `.ts` onto a `.md`
+          # path does not read as documentation.
+          files=$(printf '%s' "$payload" | jq -r '.files[]? | .filename, (.previous_filename // empty)')
+
+          if [ -z "$files" ]; then
+            echo "::warning::The push reported no changed files. Treating as code."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$files" | sed 's/^/  /'
+
+          if echo "$files" | grep -qvE '\.md$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Code changed -- deploying."
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Documentation only -- skipping the deploy."
+          fi
+
   build:
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     env:
       # Valores PÚBLICOS do cliente (o Vite os embute no bundle de qualquer forma).
       # A anon key é role=anon — os dados são protegidos por RLS, não por segredo.
@@ -52,8 +134,9 @@ jobs:
           path: dist
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    needs: [changes, build]
+    if: needs.changes.outputs.code == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
