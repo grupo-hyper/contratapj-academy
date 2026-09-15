@@ -1,0 +1,62 @@
+name: Deploy gate
+description: >-
+  Decides whether a push must be deployed, records that a commit reached an
+  environment, and tests both against the calling repository's deploy
+  workflow. The one copy every grupo-hyper deploy workflow uses.
+
+inputs:
+  mode:
+    description: "`decide` (default), `record` or `test`."
+    default: decide
+  deploy-env:
+    description: >-
+      The target environment. `record` sets the commit status
+      `deployed/<deploy-env>` and `decide` compares against the newest commit
+      carrying it. Required for decide and record.
+    default: ""
+  workflow:
+    description: "`test` only: path of the calling repository's deploy workflow."
+    default: ""
+
+outputs:
+  code:
+    description: "`decide` only: `true` to deploy, `false` when only Markdown changed since the last deploy."
+    value: ${{ steps.decide.outputs.code }}
+
+runs:
+  using: composite
+  steps:
+    - id: decide
+      if: ${{ inputs.mode == 'decide' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        AFTER: ${{ github.sha }}
+        EVENT: ${{ github.event_name }}
+        DEPLOY_ENV: ${{ inputs.deploy-env }}
+      run: bash "$GITHUB_ACTION_PATH/deploy-gate.sh" decide
+
+    - if: ${{ inputs.mode == 'record' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        AFTER: ${{ github.sha }}
+        DEPLOY_ENV: ${{ inputs.deploy-env }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: bash "$GITHUB_ACTION_PATH/deploy-gate.sh" record
+
+    - if: ${{ inputs.mode == 'test' }}
+      shell: bash
+      env:
+        WORKFLOW: ${{ inputs.workflow }}
+      run: bash "$GITHUB_ACTION_PATH/deploy-gate.test.sh" "$WORKFLOW"
+
+    - if: ${{ inputs.mode != 'decide' && inputs.mode != 'record' && inputs.mode != 'test' }}
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+      run: |
+        echo "::error::deploy-gate: unknown mode '$MODE' (use decide, record or test)"
+        exit 1

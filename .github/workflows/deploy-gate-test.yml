@@ -1,17 +1,17 @@
 name: Deploy gate test
 
-# Runs .github/scripts/deploy-gate.test.sh against THIS repository's deploy
-# workflow and its copy of deploy-gate.sh. The same two scripts are committed
-# in every repository that has the gate; this job is what makes each copy fail
-# where it lives instead of drifting unnoticed.
+# Runs the deploy gate's regression test against this repository's deploy
+# workflow, through the local copy of the action in .github/actions/deploy-gate.
+# That copy has to stay byte-identical to grupo-hyper/contratapj-infra's
+# deploy-gate/, which contratapj-infra checks daily and on every change there;
+# this job proves the copy works and that deploy-pages.yml is wired to it.
 
 on:
   pull_request:
     paths:
       - ".github/workflows/deploy-pages.yml"
       - ".github/workflows/deploy-gate-test.yml"
-      - ".github/scripts/deploy-gate.sh"
-      - ".github/scripts/deploy-gate.test.sh"
+      - ".github/actions/deploy-gate/**"
 
 permissions:
   contents: read
@@ -32,4 +32,7 @@ jobs:
           persist-credentials: false
 
       - name: Run the gate's regression test against this workflow
-        run: bash .github/scripts/deploy-gate.test.sh .github/workflows/deploy-pages.yml
+        uses: ./.github/actions/deploy-gate
+        with:
+          mode: test
+          workflow: .github/workflows/deploy-pages.yml

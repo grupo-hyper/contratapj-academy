@@ -1,33 +1,64 @@
 #!/usr/bin/env bash
-# Decides whether a push must be deployed, for the `changes` job of the deploy
-# workflow. Writes `code=true` or `code=false` to $GITHUB_OUTPUT.
+# The deploy gate shared by every grupo-hyper repository that deploys on push.
+# action.yml calls it; nothing else should.
+#
+#   deploy-gate.sh decide   writes code=true or code=false to $GITHUB_OUTPUT
+#   deploy-gate.sh record   marks $AFTER as live in $DEPLOY_ENV
 #
 # Environment:
-#   REPO        owner/name
-#   AFTER       the commit this run would deploy
-#   DEPLOY_ENV  the target environment. The deploy job marks every commit it
-#               ships with the `deployed/$DEPLOY_ENV` commit status.
-#   EVENT       github.event_name (optional). A manual run always deploys.
+#   REPO        owner/name of the calling repository
+#   AFTER       the commit being deployed
+#   DEPLOY_ENV  the target environment. `record` sets the commit status
+#               `deployed/$DEPLOY_ENV`; `decide` looks for it.
+#   EVENT       github.event_name (decide, optional). A manual run always deploys.
+#   RUN_URL     link for the status (record, optional)
 #   GH_TOKEN    read by `gh`
 #
-# The base of the comparison is the newest ancestor carrying that marker -- the
-# last commit that actually reached the environment -- NOT the previous push.
+# `decide` compares against the newest ancestor carrying the marker -- the last
+# commit that actually reached the environment -- NOT the previous push.
 # `concurrency` drops runs (it cancels one in progress, or replaces one still
 # queued), so a code push can end with no deploy at all; judging the next push
 # by its own range then skips a docs-only push and the code never ships. That
 # is what happened in contratapj-backend on 2026-09-15.
 #
-# Fails open to deploying: a manual run, no marker in the last 100 commits, an
-# API error, an unreadable, empty or possibly truncated file list all mean
-# code=true.
+# `decide` fails open to deploying: a manual run, no marker in the last 100
+# commits, an API error, an unreadable, empty or possibly truncated file list
+# all mean code=true.
 #
-# The SAME file is committed in every repository that has this gate, next to
-# deploy-gate.test.sh, and each repository's CI runs that test against its own
-# copy and its own workflow (deploy-gate-test.yml). A change here belongs in
-# all of them.
+# No value is piped into a reader that can stop early. `grep -q` exits at its
+# first match, and with pipefail the writer still feeding it fails the whole
+# pipeline (SIGPIPE, 141) -- which, in an `if`, read as "documentation only"
+# and skipped a deploy that had code, once the file list outgrew the pipe
+# buffer. Found by contratapj-bot on contratapj-payments-ms #13 with 299 long
+# `.ts` paths. Every reader below takes a here-string instead.
 set -uo pipefail
 
+mode=${1:-}
+case "$mode" in
+  decide | record) ;;
+  *)
+    echo "::error::usage: deploy-gate.sh decide|record (got '$mode')"
+    exit 2
+    ;;
+esac
+
 decide() { echo "code=$1" >> "$GITHUB_OUTPUT"; }
+
+# Without an environment the gate cannot tell which marker it means. Deploy
+# (fail open) and fail the step, so the run shows why.
+if [ -z "${DEPLOY_ENV:-}" ]; then
+  echo "::error::deploy-env is empty: the gate cannot tell which environment it guards."
+  [ "$mode" = decide ] && decide true
+  exit 1
+fi
+context="deployed/$DEPLOY_ENV"
+
+if [ "$mode" = record ]; then
+  args=(-f state=success -f context="$context" -f description="Live in $DEPLOY_ENV")
+  [ -n "${RUN_URL:-}" ] && args+=(-f target_url="$RUN_URL")
+  gh api "repos/$REPO/statuses/$AFTER" "${args[@]}" > /dev/null
+  exit $?
+fi
 
 if [ "${EVENT:-}" = "workflow_dispatch" ]; then
   echo "::notice::Manual run -- deploying."
@@ -35,7 +66,6 @@ if [ "${EVENT:-}" = "workflow_dispatch" ]; then
   exit 0
 fi
 
-context="deployed/$DEPLOY_ENV"
 # shellcheck disable=SC2016 # `$owner` etc. are GraphQL variables, not shell ones
 query='query($owner: String!, $name: String!, $expr: String!, $ctx: String!) {
   repository(owner: $owner, name: $name) {
@@ -54,7 +84,7 @@ if ! history=$(gh api graphql -f query="$query" \
 fi
 
 # A status other than SUCCESS is not a deploy.
-BASE=$(printf '%s' "$history" | jq -r '[.data.repository.object.history.nodes[]? | select(.status.context.state == "SUCCESS") | .oid] | first // empty' 2>/dev/null)
+BASE=$(jq -r '[.data.repository.object.history.nodes[]? | select(.status.context.state == "SUCCESS") | .oid] | first // empty' <<< "$history" 2>/dev/null)
 if [ -z "$BASE" ]; then
   echo "::warning::No commit in the last 100 carries $context. Treating as code."
   decide true
@@ -71,7 +101,7 @@ if ! payload=$(gh api "/repos/$REPO/compare/$BASE...$AFTER"); then
   exit 0
 fi
 
-count=$(printf '%s' "$payload" | jq '.files | length' 2>/dev/null)
+count=$(jq '.files | length' <<< "$payload" 2>/dev/null)
 case "$count" in
   '' | *[!0-9]*)
     echo "::warning::Could not read the compare response. Treating as code."
@@ -91,7 +121,7 @@ fi
 # Renames report the new path in `filename` and the original in
 # `previous_filename`; both are judged, so moving code onto a `.md` path does
 # not read as documentation.
-files=$(printf '%s' "$payload" | jq -r '.files[]? | .filename, (.previous_filename // empty)')
+files=$(jq -r '.files[]? | .filename, (.previous_filename // empty)' <<< "$payload")
 
 if [ -z "$files" ]; then
   echo "::warning::No files changed since $BASE. Treating as code."
@@ -100,9 +130,9 @@ if [ -z "$files" ]; then
 fi
 
 echo "Changed files:"
-printf '%s\n' "$files" | sed 's/^/  /'
+while IFS= read -r changed; do echo "  $changed"; done <<< "$files"
 
-if printf '%s\n' "$files" | grep -qvE '\.md$'; then
+if grep -qvE '\.md$' <<< "$files"; then
   decide true
   echo "::notice::Code changed -- deploying."
 else

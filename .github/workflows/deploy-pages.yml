@@ -62,23 +62,22 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      # Only the gate script is needed, not the repository.
+      # This repository is public, and GitHub shares a private repository's
+      # actions only with private repositories, so it cannot use
+      # grupo-hyper/contratapj-infra/deploy-gate@main like the other deploy
+      # workflows. It carries a byte-identical copy in .github/actions/deploy-gate,
+      # which contratapj-infra checks against the source daily and on every change
+      # there. Only that copy is checked out, not the repository.
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: .github/scripts
+          sparse-checkout: .github/actions/deploy-gate
           persist-credentials: false
 
-      # The decision lives in .github/scripts/deploy-gate.sh, next to the
-      # regression test that deploy-gate-test.yml runs against this workflow
-      # on every PR that touches either.
       - name: Classify the pushed files
         id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          AFTER: ${{ github.sha }}
-          EVENT: ${{ github.event_name }}
-        run: bash .github/scripts/deploy-gate.sh
+        uses: ./.github/actions/deploy-gate
+        with:
+          deploy-env: ${{ env.DEPLOY_ENV }}
 
   build:
     runs-on: ubuntu-latest
@@ -115,8 +114,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Job-level permissions replace the workflow's, so the two `deploy-pages`
-    # needs are repeated here beside the one this job adds.
+    # needs are repeated here beside the two this job adds.
     permissions:
+      contents: read # checks out the local copy of the gate, for `record`
       pages: write
       id-token: write
       statuses: write # records the `deployed/<env>` marker on the shipped commit
@@ -126,6 +126,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # The local copy of the gate, for `record` below.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions/deploy-gate
+          persist-credentials: false
+
       - id: deployment
         uses: actions/deploy-pages@v4
 
@@ -137,11 +143,7 @@ jobs:
       # deploy on the next push.
       - name: Record the deployed commit
         continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -f state=success \
-            -f context="deployed/$DEPLOY_ENV" \
-            -f description="Live in $DEPLOY_ENV" \
-            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        uses: ./.github/actions/deploy-gate
+        with:
+          mode: record
+          deploy-env: ${{ env.DEPLOY_ENV }}
