@@ -20,6 +20,11 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # The environment `deploy` publishes to, written once so the classifier that
+  # reads the `deployed/<env>` marker and the step that writes it agree.
+  DEPLOY_ENV: github-pages
+
 jobs:
   # Did this push touch anything worth deploying?
   #
@@ -35,10 +40,23 @@ jobs:
   # merge into a dead base and report success. The cleanup job stays ungated
   # and tolerates a skipped deploy.
   #
-  # Fails open to deploying: no range, an API error, or a truncated file list
-  # all mean code=true.
+  # The base is the last commit that actually reached this run's environment
+  # (`DEPLOY_ENV`), NOT the previous push. `concurrency` drops runs -- it
+  # cancels one in progress (`cancel-in-progress: true`) or replaces one still
+  # queued (either setting) -- so a code push can end with no deploy at all, and
+  # judging the next push by its own range then skips a docs-only push: the
+  # code never ships. It happened in contratapj-backend on 2026-09-15, where
+  # production sat three merges behind main with every run green. `deploy`
+  # marks each commit it ships with the `deployed/<env>` commit status; the
+  # base is the newest ancestor carrying it.
+  #
+  # Fails open to deploying: a manual run, no marker in the last 100 commits,
+  # an API error, or a truncated file list all mean code=true.
   changes:
     name: Detect code changes
+    permissions:
+      contents: read # compares two SHAs via the REST API
+      statuses: read # reads the `deployed/<env>` marker off the history
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -49,23 +67,52 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -uo pipefail
 
-          # A new branch or a force-push reports an all-zero `before`: there is
-          # no range to compare, so assume code.
-          case "$BEFORE" in
-            ""|0000000000000000000000000000000000000000)
-              echo "::warning::No previous SHA for this push. Treating as code."
-              echo "code=true" >> "$GITHUB_OUTPUT"
-              exit 0
-              ;;
-          esac
+          # A manual run is somebody asking for a deploy: never skip it.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "::notice::Manual run -- deploying."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          if ! payload=$(gh api "/repos/$REPO/compare/$BEFORE...$AFTER"); then
-            echo "::warning::Could not compare $BEFORE..$AFTER. Treating as code."
+          # The newest commit in this push's history that `deploy` marked as
+          # shipped to $DEPLOY_ENV. One GraphQL call reads the marker off the
+          # last 100 commits; a status other than SUCCESS is not a deploy.
+          context="deployed/$DEPLOY_ENV"
+          # shellcheck disable=SC2016 # `$owner` etc. are GraphQL variables, not shell ones
+          query='query($owner: String!, $name: String!, $expr: String!, $ctx: String!) {
+            repository(owner: $owner, name: $name) {
+              object(expression: $expr) {
+                ... on Commit {
+                  history(first: 100) { nodes { oid status { context(name: $ctx) { state } } } }
+                }
+              }
+            }
+          }'
+          if ! history=$(gh api graphql -f query="$query" \
+              -f owner="${REPO%%/*}" -f name="${REPO#*/}" -f expr="$AFTER" -f ctx="$context"); then
+            echo "::warning::Could not read the deploy history. Treating as code."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE=$(printf '%s' "$history" | jq -r '[.data.repository.object.history.nodes[]? | select(.status.context.state == "SUCCESS") | .oid] | first // empty')
+          if [ -z "$BASE" ]; then
+            echo "::warning::No commit in the last 100 carries $context. Treating as code."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Last commit deployed to $DEPLOY_ENV: $BASE"
+
+          # Everything since that commit, not just this push. A re-run of the
+          # commit that is already live compares it with itself, finds no files
+          # and deploys -- which is what a re-run is for.
+          if ! payload=$(gh api "/repos/$REPO/compare/$BASE...$AFTER"); then
+            echo "::warning::Could not compare $BASE..$AFTER. Treating as code."
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -85,7 +132,7 @@ jobs:
           files=$(printf '%s' "$payload" | jq -r '.files[]? | .filename, (.previous_filename // empty)')
 
           if [ -z "$files" ]; then
-            echo "::warning::The push reported no changed files. Treating as code."
+            echo "::warning::No files changed since $BASE. Treating as code."
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -135,6 +182,12 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    # Job-level permissions replace the workflow's, so the two `deploy-pages`
+    # needs are repeated here beside the one this job adds.
+    permissions:
+      pages: write
+      id-token: write
+      statuses: write # records the `deployed/<env>` marker on the shipped commit
     needs: [changes, build]
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.build.result == 'success' }}
     environment:
@@ -143,3 +196,20 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # The marker `changes` reads to find the last commit that is actually
+      # live. Written only after the deploy above succeeded, so a deploy that is
+      # cancelled or fails before this point is never taken as the base and the
+      # next run ships it. Best effort: failing to write it must not turn a
+      # successful deploy red -- the cost of a missing marker is one extra
+      # deploy on the next push.
+      - name: Record the deployed commit
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success \
+            -f context="deployed/$DEPLOY_ENV" \
+            -f description="Live in $DEPLOY_ENV" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
