@@ -14,8 +14,9 @@
 # and still never run. Exits non-zero on any failure, including stopping early.
 
 # SC2016: `${{ ... }}` below is literal workflow text, not shell.
-# SC2329: the helpers are invoked through `expect "$@"`.
-# shellcheck disable=SC2016,SC2329
+# SC2317 (older shellcheck) / SC2329 (newer): the helpers are invoked through
+# `expect "$@"`, which neither version can see.
+# shellcheck disable=SC2016,SC2317,SC2329
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -27,7 +28,10 @@ pass() { echo "PASS  $1"; }
 fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
 
 [ -f "$GATE" ] || { echo "FAIL  gate script not found at $GATE"; exit 1; }
-[ -n "$WORKFLOW" ] && [ -f "$WORKFLOW" ] || { echo "FAIL  deploy workflow not found: '${WORKFLOW}' (pass its path as the first argument)"; exit 1; }
+if [ -z "$WORKFLOW" ] || [ ! -f "$WORKFLOW" ]; then
+  echo "FAIL  deploy workflow not found: '${WORKFLOW}' (pass its path as the first argument)"
+  exit 1
+fi
 
 # A test that dies half-way must not report success. Without this, a crash
 # under `set -u` exited 0 through the EXIT trap -- measured on an earlier
@@ -259,9 +263,15 @@ step_with() {
 has_line() { WANT="$2" awk '{ t = $0; sub(/^ +(- +)?/, "", t); if (t == ENVIRON["WANT"]) f = 1 } END { exit !f }' <<< "$1"; }
 # The value of the `uses:` key in <text>.
 uses_of() { awk '{ t = $0; sub(/^ +(- +)?/, "", t) } t ~ /^uses: / { sub(/^uses: /, "", t); print t; exit }' <<< "$1"; }
-# This action, pinned to main (a per-repository pin is a copy that can drift),
-# or referenced locally by the repository that hosts it.
-is_this_action() { [[ "$1" =~ ^(grupo-hyper/[A-Za-z0-9_.-]+/([A-Za-z0-9_.-]+/)*deploy-gate@main|\./([A-Za-z0-9_.-]+/)*deploy-gate)$ ]]; }
+# This action and nothing else. Private repositories use the canonical
+# reference pinned to a full commit SHA: a push to contratapj-infra changes no
+# deploy until a repository bumps its pin, in a PR where this test runs against
+# the new version. A branch (@main) or a tag can move under every repository at
+# once, with nothing re-testing them. The public academy uses the one local copy
+# that contratapj-infra's deploy-gate-copies.yml compares with the source. Any
+# other reference -- another repository, another directory, a mutable ref --
+# runs code that none of those checks ever sees.
+is_this_action() { [[ "$1" =~ ^grupo-hyper/contratapj-infra/deploy-gate@[0-9a-f]{40}$ ]] || [ "$1" = "./.github/actions/deploy-gate" ]; }
 expect() { # name, command...
   local name=$1; shift
   if "$@"; then pass "workflow: $name"; else fail "workflow: $name"; fi
@@ -280,7 +290,7 @@ record_uses=$(uses_of "$record_step")
 expect "defines DEPLOY_ENV once, at workflow level" grep -qE '^  DEPLOY_ENV: .' <<< "$(top_block env)"
 expect "has a changes job" nonempty "$changes"
 expect "the changes job has the gate step (id: filter)" nonempty "$gate_step"
-expect "the gate step uses this action at main (got '${gate_uses}')" is_this_action "$gate_uses"
+expect "the gate step uses this action, pinned to a commit SHA or as the checked local copy (got '${gate_uses}')" is_this_action "$gate_uses"
 expect "the gate step decides (no other mode)" lacks_mode_or_decide "$gate_step"
 expect "the gate step passes DEPLOY_ENV" has_line "$gate_step" 'deploy-env: ${{ env.DEPLOY_ENV }}'
 expect "the changes job exports the gate's decision" has_line "$changes" 'code: ${{ steps.filter.outputs.code }}'
@@ -292,6 +302,38 @@ expect "the deploy job has the step recording the marker (mode: record)" nonempt
 expect "the record step uses the same action as the gate" same "$record_uses" "$gate_uses"
 expect "the record step passes DEPLOY_ENV" has_line "$record_step" 'deploy-env: ${{ env.DEPLOY_ENV }}'
 expect "recording the marker is best effort" has_line "$record_step" 'continue-on-error: true'
+# Two edges of the job graph. `deploy` must wait for the gate's decision, and
+# `record` must come after everything the deploy job does: a marker written
+# before the deploy has finished would make a later docs-only push skip code
+# that never reached the environment. So the record step is the job's LAST
+# step; anything after it is something it could be marking as done too early.
+needs_changes() {
+  grep -qE '^    needs: (changes|\[(.*, *)?changes(, *.*)?\])$' <<< "$1" \
+    || awk '/^    needs:$/ { on = 1; next } on && /^      - / { t = $0; sub(/^      - +/, "", t); if (t == "changes") f = 1; next } on { exit } END { exit !f }' <<< "$1"
+}
+last_step_has() { # job text, line: whether the job's last step has that line
+  WANT="$2" awk '
+    /^    steps:$/         { insteps = 1; next }
+    /^    [^ ]/            { if (insteps) exit; next }
+    insteps && /^      - / { buf = "" }
+    insteps                { buf = buf $0 "\n" }
+    END {
+      n = split(buf, lines, "\n")
+      for (i = 1; i <= n; i++) { t = lines[i]; sub(/^ +(- +)?/, "", t); if (t == ENVIRON["WANT"]) exit 0 }
+      exit 1
+    }' <<< "$1"
+}
+expect "the deploy job waits for the changes job (needs: changes)" needs_changes "$deploy"
+# The test job has to run the version the deploy uses, or it certifies a
+# version nothing deploys with. Its workflow sits next to the deploy workflow.
+test_wf="$(dirname "$WORKFLOW")/deploy-gate-test.yml"
+if [ -f "$test_wf" ]; then
+  test_uses=$(sed -E '/^[[:space:]]*#/d' "$test_wf" | awk '{ t = $0; sub(/^ +(- +)?/, "", t) } t ~ /^uses: / && t !~ /^uses: actions\/checkout@/ { sub(/^uses: /, "", t); print t; exit }')
+  expect "deploy-gate-test.yml runs the version the deploy uses (got '${test_uses}')" same "$test_uses" "$gate_uses"
+else
+  fail "workflow: $test_wf, which runs this test in CI, exists next to the deploy workflow"
+fi
+expect "recording the marker is the deploy job's last step" last_step_has "$deploy" 'mode: record'
 # A repository that cannot use the shared action (a public one: GitHub shares
 # a private repository's actions only with private repositories) carries a copy
 # under .github/actions and references it locally. A local action exists only
