@@ -311,17 +311,14 @@ needs_changes() {
   grep -qE '^    needs: (changes|\[(.*, *)?changes(, *.*)?\])$' <<< "$1" \
     || awk '/^    needs:$/ { on = 1; next } on && /^      - / { t = $0; sub(/^      - +/, "", t); if (t == "changes") f = 1; next } on { exit } END { exit !f }' <<< "$1"
 }
-last_step_has() { # job text, line: whether the job's last step has that line
-  WANT="$2" awk '
+# The job's last step, as the same text step_with returns for a step.
+last_step() {
+  awk '
     /^    steps:$/         { insteps = 1; next }
     /^    [^ ]/            { if (insteps) exit; next }
     insteps && /^      - / { buf = "" }
     insteps                { buf = buf $0 "\n" }
-    END {
-      n = split(buf, lines, "\n")
-      for (i = 1; i <= n; i++) { t = lines[i]; sub(/^ +(- +)?/, "", t); if (t == ENVIRON["WANT"]) exit 0 }
-      exit 1
-    }' <<< "$1"
+    END                    { printf "%s", buf }' <<< "$1"
 }
 expect "the deploy job waits for the changes job (needs: changes)" needs_changes "$deploy"
 # The test job has to run the version the deploy uses, or it certifies a
@@ -333,7 +330,11 @@ if [ -f "$test_wf" ]; then
 else
   fail "workflow: $test_wf, which runs this test in CI, exists next to the deploy workflow"
 fi
-expect "recording the marker is the deploy job's last step" last_step_has "$deploy" 'mode: record'
+# Identity, not a line: the last step has to BE the record step validated
+# above. Asking only whether the last step contains `mode: record` let a
+# correct record step sit earlier while some other action with that input
+# closed the job -- raised by contratapj-bot on contratapj-academy #7.
+expect "recording the marker is the deploy job's last step (the same step checked above)" same "$(last_step "$deploy")" "$record_step"
 # A repository that cannot use the shared action (a public one: GitHub shares
 # a private repository's actions only with private repositories) carries a copy
 # under .github/actions and references it locally. A local action exists only
