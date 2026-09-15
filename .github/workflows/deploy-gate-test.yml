@@ -1,0 +1,35 @@
+name: Deploy gate test
+
+# Runs .github/scripts/deploy-gate.test.sh against THIS repository's deploy
+# workflow and its copy of deploy-gate.sh. The same two scripts are committed
+# in every repository that has the gate; this job is what makes each copy fail
+# where it lives instead of drifting unnoticed.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deploy-pages.yml"
+      - ".github/workflows/deploy-gate-test.yml"
+      - ".github/scripts/deploy-gate.sh"
+      - ".github/scripts/deploy-gate.test.sh"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-gate-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Deploy gate test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Run the gate's regression test against this workflow
+        run: bash .github/scripts/deploy-gate.test.sh .github/workflows/deploy-pages.yml

@@ -62,6 +62,15 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
+      # Only the gate script is needed, not the repository.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      # The decision lives in .github/scripts/deploy-gate.sh, next to the
+      # regression test that deploy-gate-test.yml runs against this workflow
+      # on every PR that touches either.
       - name: Classify the pushed files
         id: filter
         env:
@@ -69,84 +78,7 @@ jobs:
           REPO: ${{ github.repository }}
           AFTER: ${{ github.sha }}
           EVENT: ${{ github.event_name }}
-        run: |
-          set -uo pipefail
-
-          # A manual run is somebody asking for a deploy: never skip it.
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo "::notice::Manual run -- deploying."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # The newest commit in this push's history that `deploy` marked as
-          # shipped to $DEPLOY_ENV. One GraphQL call reads the marker off the
-          # last 100 commits; a status other than SUCCESS is not a deploy.
-          context="deployed/$DEPLOY_ENV"
-          # shellcheck disable=SC2016 # `$owner` etc. are GraphQL variables, not shell ones
-          query='query($owner: String!, $name: String!, $expr: String!, $ctx: String!) {
-            repository(owner: $owner, name: $name) {
-              object(expression: $expr) {
-                ... on Commit {
-                  history(first: 100) { nodes { oid status { context(name: $ctx) { state } } } }
-                }
-              }
-            }
-          }'
-          if ! history=$(gh api graphql -f query="$query" \
-              -f owner="${REPO%%/*}" -f name="${REPO#*/}" -f expr="$AFTER" -f ctx="$context"); then
-            echo "::warning::Could not read the deploy history. Treating as code."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          BASE=$(printf '%s' "$history" | jq -r '[.data.repository.object.history.nodes[]? | select(.status.context.state == "SUCCESS") | .oid] | first // empty')
-          if [ -z "$BASE" ]; then
-            echo "::warning::No commit in the last 100 carries $context. Treating as code."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "Last commit deployed to $DEPLOY_ENV: $BASE"
-
-          # Everything since that commit, not just this push. A re-run of the
-          # commit that is already live compares it with itself, finds no files
-          # and deploys -- which is what a re-run is for.
-          if ! payload=$(gh api "/repos/$REPO/compare/$BASE...$AFTER"); then
-            echo "::warning::Could not compare $BASE..$AFTER. Treating as code."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # The compare endpoint caps `files` at 300. A truncated list cannot be
-          # judged -- the code could be in the part that was cut.
-          count=$(printf '%s' "$payload" | jq '.files | length')
-          if [ "$count" -ge 300 ]; then
-            echo "::warning::Compare returned $count files and may be truncated. Treating as code."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Renames report the new path in `filename` and the original in
-          # `previous_filename`; both are judged, so moving a `.ts` onto a `.md`
-          # path does not read as documentation.
-          files=$(printf '%s' "$payload" | jq -r '.files[]? | .filename, (.previous_filename // empty)')
-
-          if [ -z "$files" ]; then
-            echo "::warning::No files changed since $BASE. Treating as code."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Changed files:"
-          printf '%s\n' "$files" | sed 's/^/  /'
-
-          if printf '%s\n' "$files" | grep -qvE '\.md$'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Code changed -- deploying."
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Documentation only -- skipping the deploy."
-          fi
+        run: bash .github/scripts/deploy-gate.sh
 
   build:
     runs-on: ubuntu-latest
